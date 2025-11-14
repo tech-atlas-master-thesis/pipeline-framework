@@ -20,27 +20,27 @@ class PipelineServer:
                 self.threadPool.create_task(self._execute_step(pipeline_step))
 
     async def _execute_step(self, step: Step):
-        pipeline = step._pipeline
+        pipeline = step.pipeline
 
         try:
-            await step.execute()
+            await step.run()
         except Exception as e:
             print(e)
             with pipelineMutex:
-                step._set_state(PipelineState.ERROR)
-                pipeline._get_updated_state()
+                step.set_state(PipelineState.ERROR)
+                pipeline.get_updated_state()
                 return
 
         with pipelineMutex:
-            step._set_state(PipelineState.FINISHED)
-            if pipeline._get_updated_state() != PipelineState.RUNNING:
+            step.set_state(PipelineState.FINISHED)
+            if pipeline.get_updated_state() != PipelineState.RUNNING:
                 return
 
-            for dependent in step._dependent_steps:
+            for dependent in step.dependent_steps:
                 if dependent.state != PipelineState.OPEN:
                     continue
                 if all(dependency.state == PipelineState.FINISHED for dependency in dependent.dependencies):
-                    dependent._set_state(PipelineState.FINISHED)
+                    dependent.set_state(PipelineState.FINISHED)
                     self.threadPool.create_task(self._execute_step(dependent))
 
 
