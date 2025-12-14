@@ -1,38 +1,23 @@
-from abc import abstractmethod
-from asyncio import Lock
-from typing import Union, List, Tuple, Mapping
+from typing import Dict
 
+from server.pipeline.config import PipelineConfig
+from server.pipeline.lock import pipelineMutex
 from server.pipeline.status import PipelineState
-from step import Step
-
-
-pipelineMutex = Lock()
+from server.pipeline.step import Step
 
 
 class Pipeline:
-    @classmethod
-    def pipeline_with_consecutive_steps(cls, name: str, steps: List[Step]):
-        prepared_steps: List[Step] = []
-        for i, step in enumerate(steps):
-            if i > 0 and step.dependencies is None:
-                step.dependencies = [steps[i-1]]
-            prepared_steps.append(step)
-
-        return cls(name, prepared_steps)
-
-    def __init__(self, name: str, steps: List[Step]):
-        # TODO: write to DB with steps
-        self.id = 0
-        self.name = name
-        self.steps = steps
+    def __init__(self, pipeline_config: PipelineConfig):
+        self.config = pipeline_config
+        self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
-        for step in steps:
-            step.pipeline = self
-        for step in steps:
-            for dependency in step.dependencies:
-                if dependency.dependent_steps is None:
-                    dependency.dependent_steps = []
-                dependency.dependent_steps.append(step)
+        for step in pipeline_config["steps"]:
+            dependencies = [self.steps[step_name] for step_name in step.dependencies]
+            if any(dependency is None for dependency in dependencies):
+                raise NameError(f"Step {step.name} is not (yet) defined")
+            self.steps[step.name] = Step(step, self, dependencies)
+        # TODO: write to DB
+        self.id = 0
 
     def get_updated_state(self):
         assert pipelineMutex.locked()
@@ -47,7 +32,7 @@ class Pipeline:
         assert pipelineMutex.locked()
         any_running = False
         any_open = True
-        for step in self.steps:
+        for step in self.steps.values():
             if step.state == PipelineState.ERROR:
                 return PipelineState.ERROR
             if step.state == PipelineState.RUNNING:

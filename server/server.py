@@ -1,26 +1,32 @@
 import asyncio
 from typing import List
-from pipeline.pipeline import Pipeline, pipelineMutex
-from pipeline.status import PipelineState
-from pipeline.step import Step
+from server.pipeline.pipeline import Pipeline
+from server.pipeline.status import PipelineState
+from server.pipeline.step import Step
+from server.pipeline.config import PipelineConfig
+from server.pipeline.lock import pipelineMutex
 
 
 class PipelineServer:
-    threadPool = asyncio.get_event_loop()
+    threadPool = asyncio.new_event_loop()
 
     def __init__(self):
         self.pipelines: List[Pipeline] = []
         self.threadPool.run_forever()
 
-    def add_pipeline(self, pipeline: Pipeline):
-        # TODO: write to database
+    def add_pipeline(self, pipeline_config: PipelineConfig):
+        pipeline = Pipeline(pipeline_config)
         self.pipelines.append(pipeline)
-        for pipeline_step in pipeline.steps:
-            if all(dependency.state == PipelineState.FINISHED for dependency in pipeline_step.dependencies):
-                self.threadPool.create_task(self._execute_step(pipeline_step))
+        with pipelineMutex:
+            for _, pipeline_step in pipeline.steps.items():
+                if all(dependency.state == PipelineState.FINISHED for dependency in pipeline_step.dependencies):
+                    self.threadPool.create_task(self._execute_step(pipeline_step))
 
     async def _execute_step(self, step: Step):
         pipeline = step.pipeline
+
+        with pipelineMutex:
+            step.set_state(PipelineState.RUNNING)
 
         try:
             await step.run()
@@ -28,19 +34,15 @@ class PipelineServer:
             print(e)
             with pipelineMutex:
                 step.set_state(PipelineState.ERROR)
-                pipeline.get_updated_state()
                 return
 
         with pipelineMutex:
             step.set_state(PipelineState.FINISHED)
-            if pipeline.get_updated_state() != PipelineState.RUNNING:
+            if pipeline.state != PipelineState.RUNNING:
                 return
 
             for dependent in step.dependent_steps:
                 if dependent.state != PipelineState.OPEN:
                     continue
                 if all(dependency.state == PipelineState.FINISHED for dependency in dependent.dependencies):
-                    dependent.set_state(PipelineState.FINISHED)
                     self.threadPool.create_task(self._execute_step(dependent))
-
-

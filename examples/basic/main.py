@@ -1,21 +1,29 @@
 from server import *
 
-class BasicFirstStep(Step):
-    def name(self) -> str:
+
+class BasicFirstStep(StepConfig):
+    def display_name(self):
         return "Basic First Step"
+    def name(self):
+        return "basic-first-step"
     async def run(self):
         print("Basic First Step")
 
-class BasicSecondStep(Step):
-    def name(self) -> str:
+class BasicSecondStep(StepConfig):
+    @property
+    def display_name(self):
         return "Basic Second Step"
+    def name(self) -> str:
+        return "basic-second-step"
     async def run(self):
         print("Basic Second Step")
 
 def main():
     pipeline_server = PipelineServer()
 
-    pipeline = Pipeline.pipeline_with_consecutive_steps("Basic Pipeline", [BasicFirstStep(), BasicSecondStep()])
+    pipeline: PipelineConfig = {
+        'steps': [BasicFirstStep(), BasicSecondStep()],
+    }
 
     pipeline_server.add_pipeline(pipeline)
 

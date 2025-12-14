@@ -1,37 +1,44 @@
-from abc import abstractmethod
-from typing import Union, List, Self, Coroutine
+import importlib
+from typing import Union, List, Self
 
+from server.pipeline.config import StepConfig
 from server.pipeline.lock import pipelineMutex
-from server.pipeline.pipeline import Pipeline
 from server.pipeline.pipeline import PipelineState
 
-class Step:
-    @classmethod
-    def step_factory(cls, name: str, run: Coroutine[None, None, None]):
-        class FactoryStep(cls):
-            def name(self) -> str:
-                return name
-            async def run(self):
-                return await run()
-        return FactoryStep
+pipeline = importlib.import_module('server.pipeline.pipeline')
 
-    def __init__(self, dependencies: Union[None, List[Self]] = None):
+
+class Step:
+    def __init__(self, step_config: StepConfig, pipeline: pipeline.Pipeline, dependencies: List[Self]):
         self.id: Union[int, None] = None
         self.state = PipelineState.OPEN
+        self.step_config = step_config
         self.dependencies = dependencies
-        self.pipeline: Union[Pipeline, None] = None
+        self.pipeline = pipeline
         self.dependent_steps: List[Self] = []
+        for dependency in dependencies:
+            dependency.dependent_steps.append(self)
 
     def set_state(self, state: PipelineState):
         assert pipelineMutex.locked()
         # TODO: write to DB
         self.state = state
+        self.pipeline.get_updated_state()
 
-    @abstractmethod
     async def run(self):
-        raise NotImplemented("Execution function not implemented")
+        cor = self.step_config.run()
+        try:
+            while True:
+                event = cor.send(None)
+                # TODO: save event
+        except StopAsyncIteration as e:
+            return e.value
+
 
     @property
-    @abstractmethod
     def name(self) -> str:
-        raise NotImplemented("Name not implemented")
+        return self.step_config.name
+
+    @property
+    def display_name(self):
+        return self.step_config.display_name
