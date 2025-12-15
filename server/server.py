@@ -12,6 +12,8 @@ class PipelineServer:
 
     def __init__(self):
         self.pipelines: List[Pipeline] = []
+
+    def start_server(self):
         self.threadPool.run_forever()
 
     def add_pipeline(self, pipeline_config: PipelineConfig):
@@ -24,12 +26,15 @@ class PipelineServer:
 
     async def _execute_step(self, step: Step):
         pipeline = step.pipeline
+        print("Start with step", step.name, pipeline, step)
 
         with pipelineMutex:
             step.set_state(PipelineState.RUNNING)
 
         try:
+            print("Executing step", step.name)
             await step.run()
+            print("Execution finished", step.name)
         except Exception as e:
             print(e)
             with pipelineMutex:

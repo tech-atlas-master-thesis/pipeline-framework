@@ -12,7 +12,7 @@ class Pipeline:
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
         for step in pipeline_config["steps"]:
-            dependencies = [self.steps[step_name] for step_name in step.dependencies]
+            dependencies = [self.steps[step_name] for step_name in step.dependencies] if step.dependencies else []
             if any(dependency is None for dependency in dependencies):
                 raise NameError(f"Step {step.name} is not (yet) defined")
             self.steps[step.name] = Step(step, self, dependencies)

@@ -27,6 +27,8 @@ def main():
 
     pipeline_server.add_pipeline(pipeline)
 
+    pipeline_server.start_server()
+
 
 if __name__ == "__main__":
     main()

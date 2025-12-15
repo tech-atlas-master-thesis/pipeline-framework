@@ -18,6 +18,7 @@ class Step:
         self.dependent_steps: List[Self] = []
         for dependency in dependencies:
             dependency.dependent_steps.append(self)
+        print(step_config, dependencies)
 
     def set_state(self, state: PipelineState):
         assert pipelineMutex.locked()
