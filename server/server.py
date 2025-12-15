@@ -1,20 +1,20 @@
 import asyncio
 from typing import List
-from server.pipeline.pipeline import Pipeline
-from server.pipeline.status import PipelineState
-from server.pipeline.step import Step
-from server.pipeline.config import PipelineConfig
-from server.pipeline.lock import pipelineMutex
+from .pipeline.pipeline import Pipeline
+from .pipeline.status import PipelineState
+from .pipeline.step import Step
+from .pipeline.config import PipelineConfig
+from .pipeline.lock import pipelineMutex
 
 
 class PipelineServer:
-    threadPool = asyncio.new_event_loop()
+    thread_pool = asyncio.new_event_loop()
 
     def __init__(self):
         self.pipelines: List[Pipeline] = []
 
     def start_server(self):
-        self.threadPool.run_forever()
+        self.thread_pool.run_forever()
 
     def add_pipeline(self, pipeline_config: PipelineConfig):
         pipeline = Pipeline(pipeline_config)
@@ -22,7 +22,7 @@ class PipelineServer:
         with pipelineMutex:
             for _, pipeline_step in pipeline.steps.items():
                 if all(dependency.state == PipelineState.FINISHED for dependency in pipeline_step.dependencies):
-                    self.threadPool.create_task(self._execute_step(pipeline_step))
+                    self.thread_pool.create_task(self._execute_step(pipeline_step))
 
     async def _execute_step(self, step: Step):
         pipeline = step.pipeline
@@ -50,4 +50,4 @@ class PipelineServer:
                 if dependent.state != PipelineState.OPEN:
                     continue
                 if all(dependency.state == PipelineState.FINISHED for dependency in dependent.dependencies):
-                    self.threadPool.create_task(self._execute_step(dependent))
+                    self.thread_pool.create_task(self._execute_step(dependent))

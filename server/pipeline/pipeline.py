@@ -1,9 +1,9 @@
 from typing import Dict
 
-from server.pipeline.config import PipelineConfig
-from server.pipeline.lock import pipelineMutex
-from server.pipeline.status import PipelineState
-from server.pipeline.step import Step
+from .config import PipelineConfig
+from .lock import pipelineMutex
+from .status import PipelineState
+from .step import Step
 
 
 class Pipeline:

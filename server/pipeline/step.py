@@ -1,15 +1,19 @@
-import importlib
 from typing import Union, List, Self
 
-from server.pipeline.config import StepConfig
-from server.pipeline.lock import pipelineMutex
-from server.pipeline.pipeline import PipelineState
+from .config import StepConfig
+from .lock import pipelineMutex
+from .pipeline import PipelineState
 
-pipeline = importlib.import_module('server.pipeline.pipeline')
+
+class _Pipeline():
+    """Dummy class"""
+    def get_updated_state(self):
+        """Trigger to check state of every step and derive step for pipeline"""
+        pass
 
 
 class Step:
-    def __init__(self, step_config: StepConfig, pipeline: pipeline.Pipeline, dependencies: List[Self]):
+    def __init__(self, step_config: StepConfig, pipeline: _Pipeline, dependencies: List[Self]):
         self.id: Union[int, None] = None
         self.state = PipelineState.OPEN
         self.step_config = step_config
