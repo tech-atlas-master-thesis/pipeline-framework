@@ -1,5 +1,7 @@
 import asyncio
-from typing import List
+import threading
+from asyncio import AbstractEventLoop
+from typing import List, Tuple
 from .pipeline.pipeline import Pipeline
 from .pipeline.status import PipelineState
 from .pipeline.step import Step
@@ -15,6 +17,11 @@ class PipelineServer:
 
     def start_server(self):
         self.thread_pool.run_forever()
+
+    def start_server_async(self) -> Tuple[threading.Thread, AbstractEventLoop]:
+        thread =  threading.Thread(target=self.start_server)
+        thread.start()
+        return thread, self.thread_pool
 
     def add_pipeline(self, pipeline_config: PipelineConfig):
         pipeline = Pipeline(pipeline_config)
