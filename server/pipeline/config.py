@@ -3,6 +3,8 @@ from typing import List, TypedDict, Union
 
 
 class PipelineConfig(TypedDict):
+    name: str
+    display_name: str
     steps: List[StepConfig]
 
 class StepConfig(metaclass=ABCMeta):

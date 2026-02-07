@@ -48,4 +48,4 @@ class Pipeline:
 
     @property
     def name(self) -> str:
-        return self.config.name
+        return self.config['name']
