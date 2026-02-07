@@ -1,4 +1,4 @@
-from typing import Union, List, Self
+from typing import Union, List, Self, Optional
 
 from .config import StepConfig
 from .lock import pipelineMutex
@@ -11,10 +11,22 @@ class _Pipeline():
         """Trigger to check state of every step and derive step for pipeline"""
         pass
 
+    @property
+    def name(self) -> str:
+        return ''
+
+    @property
+    def state(self) -> PipelineState:
+        return PipelineState.RUNNING
+
+    @property
+    def id(self) -> int:
+        return 0
+
 
 class Step:
     def __init__(self, step_config: StepConfig, pipeline: _Pipeline, dependencies: List[Self]):
-        self.id: Union[int, None] = None
+        self.id: Optional[int] = None
         self.state = PipelineState.OPEN
         self.step_config = step_config
         self.dependencies = dependencies
@@ -34,7 +46,7 @@ class Step:
         cor = self.step_config.run()
         try:
             while True:
-                event = cor.send(None)
+                event = await cor.send(None)
                 # TODO: save event
         except StopAsyncIteration as e:
             return e.value

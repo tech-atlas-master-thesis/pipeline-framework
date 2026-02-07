@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from .config import PipelineConfig
 from .lock import pipelineMutex
@@ -8,6 +8,7 @@ from .step import Step
 
 class Pipeline:
     def __init__(self, pipeline_config: PipelineConfig):
+        self.id: Optional[int] = None
         self.config = pipeline_config
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
@@ -44,3 +45,7 @@ class Pipeline:
         if any_open:
             return PipelineState.OPEN
         return PipelineState.FINISHED
+
+    @property
+    def name(self) -> str:
+        return self.config.name
