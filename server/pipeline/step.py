@@ -1,4 +1,5 @@
-from typing import Union, List, Self, Optional
+import threading
+from typing import List, Self, Optional
 
 from .config import StepConfig
 from .lock import pipelineMutex
@@ -25,6 +26,9 @@ class _Pipeline():
 
 
 class Step:
+    counter_lock = threading.Lock()
+    id_counter = 0
+
     def __init__(self, step_config: StepConfig, pipeline: _Pipeline, dependencies: List[Self]):
         self.id: Optional[int] = None
         self.state = PipelineState.OPEN
@@ -34,7 +38,10 @@ class Step:
         self.dependent_steps: List[Self] = []
         for dependency in dependencies:
             dependency.dependent_steps.append(self)
-        print(step_config, dependencies)
+        # TODO: write to DB
+        with Step.counter_lock:
+            self.id: Optional[int] = Step.id_counter
+            Step.id_counter += 1
 
     def set_state(self, state: PipelineState):
         assert pipelineMutex.locked()
@@ -43,19 +50,12 @@ class Step:
         self.pipeline.get_updated_state()
 
     async def run(self):
-        cor = self.step_config.run()
-        try:
-            while True:
-                event = await cor.send(None)
-                # TODO: save event
-        except StopAsyncIteration as e:
-            return e.value
+        async for event in self.step_config.run():
+            print(event)
+            # TODO: save event
 
-
-    @property
     def name(self) -> str:
-        return self.step_config.name
+        return self.step_config.name()
 
-    @property
     def display_name(self):
-        return self.step_config.display_name
+        return self.step_config.display_name()
