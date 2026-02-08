@@ -1,0 +1,45 @@
+from typing import List, Optional, Dict
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+from pipelineFramework import PipelineServer
+from pipelineFramework.server.pipeline.config import PipelineConfig
+from pipelineFramework.server.pipeline.dto import PipelineDto, StepDto
+from pipelineFramework.server.pipeline.pipeline import Pipeline
+
+
+class PipelineCreation(BaseModel):
+    name: str
+    config: Optional[Dict[str, str]] = None
+
+
+def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str) -> None:
+    available_pipelines = {pipeline["name"]: pipeline for pipeline in pipeline_config}
+
+    def get_pipeline_by_id(pipeline_id: int) -> Optional[Pipeline]:
+        return [pipeline for pipeline in pipeline_server.pipelines if pipeline.id == pipeline_id][0]
+
+    @app.get(api_base_url + "/hello-world/")
+    async def hello_world():
+        return {"message": "Hello World"}
+
+    @app.get(api_base_url + "/pipelines")
+    async def get_pipelines() -> List[PipelineDto]:
+        return [pipeline.serialize() for pipeline in pipeline_server.pipelines]
+
+    @app.get(api_base_url + "/pipelines/{pipeline_id}")
+    async def get_pipeline(pipeline_id: int) -> Optional[PipelineDto]:
+        pipeline = get_pipeline_by_id(pipeline_id)
+        return pipeline.serialize() if pipeline else None
+
+    @app.get(api_base_url + "/pipelines/{pipeline_id}/steps")
+    async def get_pipeline_steps(pipeline_id: int) -> List[StepDto]:
+        pipeline = get_pipeline_by_id(pipeline_id)
+        return [pipeline.serialize() for pipeline in pipeline.steps.values()] if pipeline else []
+
+    @app.post(api_base_url + "/pipelines")
+    async def create_pipeline(pipeline: PipelineCreation):
+        config = available_pipelines[pipeline.name]
+        if config:
+            pipeline_server.add_pipeline(config)

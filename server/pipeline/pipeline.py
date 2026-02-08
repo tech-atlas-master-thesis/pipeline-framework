@@ -2,6 +2,7 @@ import threading
 from typing import Dict, Optional
 
 from .config import PipelineConfig
+from .dto import PipelineDto
 from .lock import pipelineMutex
 from .status import PipelineState
 from .step import Step
@@ -62,3 +63,6 @@ class Pipeline:
     @property
     def name(self) -> str:
         return self.config['name']
+
+    def serialize(self) -> PipelineDto:
+        return PipelineDto(id=self.id, name=self.name, state=self.state, display_name=self.config['display_name'] )

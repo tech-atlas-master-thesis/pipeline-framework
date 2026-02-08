@@ -2,6 +2,7 @@ import threading
 from typing import List, Self, Optional
 
 from .config import StepConfig
+from .dto import StepDto
 from .lock import pipelineMutex
 from .pipeline import PipelineState
 
@@ -59,3 +60,6 @@ class Step:
 
     def display_name(self):
         return self.step_config.display_name()
+
+    def serialize(self) -> StepDto:
+        return StepDto(id=self.id, name=self.name(), state=self.state, display_name=self.display_name(), events=[], result={} )
