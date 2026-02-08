@@ -1,12 +1,15 @@
 from abc import abstractmethod, ABCMeta
-from typing import List, TypedDict, Union
+from dataclasses import dataclass
+from typing import List, Union
 
 
-class PipelineConfig(TypedDict):
+@dataclass
+class PipelineConfig:
     name: str
     display_name: str
-    parallelize: bool | None
+    parallelize: bool
     steps: List[StepConfig]
+
 
 class StepConfig(metaclass=ABCMeta):
     @abstractmethod
