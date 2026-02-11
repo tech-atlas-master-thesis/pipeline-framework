@@ -17,8 +17,8 @@ class Pipeline:
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
         previous_step: Optional[Step] = None
-        parallelize = "parallelize"  in pipeline_config and pipeline_config["parallelize"]
-        for step_config in pipeline_config["steps"]:
+        parallelize = pipeline_config.parallelize
+        for step_config in pipeline_config.steps:
             if parallelize:
                 dependencies = [self.steps[step_name] for step_name in step_config.dependencies()] if step_config.dependencies() else []
                 if any(dependency is None for dependency in dependencies):
@@ -62,7 +62,7 @@ class Pipeline:
 
     @property
     def name(self) -> str:
-        return self.config['name']
+        return self.config.name
 
     def serialize(self) -> PipelineDto:
-        return PipelineDto(id=self.id, name=self.name, state=self.state, display_name=self.config['display_name'] )
+        return PipelineDto(id=self.id, name=self.name, state=self.state, display_name=self.config.display_name )

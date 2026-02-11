@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from pipelineFramework import PipelineServer
@@ -15,7 +15,7 @@ class PipelineCreation(BaseModel):
 
 
 def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str) -> None:
-    available_pipelines = {pipeline["name"]: pipeline for pipeline in pipeline_config}
+    available_pipelines = {pipeline.name: pipeline for pipeline in pipeline_config}
 
     def get_pipeline_by_id(pipeline_id: int) -> Optional[Pipeline]:
         return [pipeline for pipeline in pipeline_server.pipelines if pipeline.id == pipeline_id][0]
@@ -40,6 +40,8 @@ def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline
 
     @app.post(api_base_url + "/pipelines")
     async def create_pipeline(pipeline: PipelineCreation):
+        if pipeline.name not in available_pipelines:
+            raise HTTPException(status_code=404, detail="pipeline not found")
         config = available_pipelines[pipeline.name]
         if config:
             pipeline_server.add_pipeline(config)
