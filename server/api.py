@@ -39,9 +39,7 @@ def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline
         return [pipeline.serialize() for pipeline in pipeline.steps.values()] if pipeline else []
 
     @app.post(api_base_url + "/pipelines")
-    async def create_pipeline(pipeline: PipelineCreation):
-        if pipeline.name not in available_pipelines:
+    async def create_pipeline(pipeline: PipelineCreation) -> PipelineDto:
+        if pipeline.name not in available_pipelines or not (config := available_pipelines[pipeline.name]):
             raise HTTPException(status_code=404, detail="pipeline not found")
-        config = available_pipelines[pipeline.name]
-        if config:
-            pipeline_server.add_pipeline(config)
+        return pipeline_server.add_pipeline(config).serialize()

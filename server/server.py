@@ -17,7 +17,7 @@ class PipelineServer:
     def __init__(self):
         self.pipelines: List[Pipeline] = []
 
-    def add_pipeline(self, pipeline_config: PipelineConfig):
+    def add_pipeline(self, pipeline_config: PipelineConfig) -> Pipeline:
         pipeline = Pipeline(pipeline_config)
         self.pipelines.append(pipeline)
         logger.info(f"Added pipeline '{pipeline.name}'")
@@ -26,6 +26,7 @@ class PipelineServer:
                 if all(dependency.state == PipelineState.FINISHED for dependency in pipeline_step.dependencies):
                     logger.debug(f"Added pipeline step, '{pipeline_step.name()}' ({pipeline_step.id}) from pipeline '{pipeline.name}' ({pipeline.id})")
                     self.running_tasks.append(asyncio.create_task(self._execute_step(pipeline_step)))
+        return pipeline
 
     async def _execute_step(self, step: Step):
         logger.info(f"Executing step '{step.name()}'")

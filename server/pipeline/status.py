@@ -6,3 +6,9 @@ class PipelineState(Enum):
     RUNNING = "RUNNING"
     ERROR = "ERROR"
     FINISHED = "FINISHED"
+
+class EventType(Enum):
+    INFO = "INFO"
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    DEBUG = "DEBUG"

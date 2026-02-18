@@ -1,10 +1,19 @@
+import datetime
 import threading
-from typing import List, Self, Optional
+from dataclasses import dataclass
+from typing import List, Self, Optional, NamedTuple
 
 from .config import StepConfig
 from .dto import StepDto
 from .lock import pipelineMutex
 from .pipeline import PipelineState
+from .status import EventType
+
+@dataclass
+class Event:
+    timestamp: datetime.datetime
+    message: str
+    type: EventType
 
 
 class _Pipeline():
@@ -37,6 +46,7 @@ class Step:
         self.dependencies = dependencies
         self.pipeline = pipeline
         self.dependent_steps: List[Self] = []
+        self.events: List[Event] = []
         for dependency in dependencies:
             dependency.dependent_steps.append(self)
         # TODO: write to DB
@@ -51,9 +61,16 @@ class Step:
         self.pipeline.get_updated_state()
 
     async def run(self):
-        async for event in self.step_config.run():
-            print(event)
+        self.events.append(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
+        try:
+            async for event, event_type in self.step_config.run():
+                print(event)
+                self.events.append(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
             # TODO: save event
+        except Exception as e:
+            self.events.append(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))
+            raise e
+        self.events.append(Event(datetime.datetime.now(), "Pipeline step ended", EventType.INFO))
 
     def name(self) -> str:
         return self.step_config.name()
@@ -62,4 +79,4 @@ class Step:
         return self.step_config.display_name()
 
     def serialize(self) -> StepDto:
-        return StepDto(id=self.id, name=self.name(), state=self.state, display_name=self.display_name(), events=[], result={} )
+        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result={} )

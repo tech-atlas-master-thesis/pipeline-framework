@@ -16,6 +16,6 @@ class StepDto:
     id: int
     state: PipelineState
     name: str
-    display_name: str
+    displayName: str
     events: List
     result: Any
