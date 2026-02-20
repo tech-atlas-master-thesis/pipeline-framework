@@ -1,10 +1,11 @@
+from dataclasses import dataclass
 from typing import List, Optional, Dict
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from pipelineFramework import PipelineServer
-from pipelineFramework.server.pipeline.config import PipelineConfig
+from pipelineFramework.server.pipeline.config import PipelineConfig, StepConfig
 from pipelineFramework.server.pipeline.dto import PipelineDto, StepDto
 from pipelineFramework.server.pipeline.pipeline import Pipeline
 
@@ -12,6 +13,28 @@ from pipelineFramework.server.pipeline.pipeline import Pipeline
 class PipelineCreation(BaseModel):
     name: str
     config: Optional[Dict[str, str]] = None
+
+
+@dataclass
+class StepConfigDto:
+    name: str
+    display_name: str
+
+    def __init__(self, step: StepConfig):
+        self.name = step.name()
+        self.display_name = step.display_name()
+
+
+@dataclass
+class PipelineConfigDto:
+    name: str
+    display_name: str
+    steps: List[StepConfigDto]
+
+    def __init__(self, pipeline: PipelineConfig):
+        self.name = pipeline.name
+        self.display_name = pipeline.display_name
+        self.steps = [StepConfigDto(step) for step in pipeline.steps]
 
 
 def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str) -> None:
@@ -23,6 +46,10 @@ def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline
     @app.get(api_base_url + "/hello-world/")
     async def hello_world():
         return {"message": "Hello World"}
+
+    @app.get(api_base_url + "/config/pipeline-types")
+    async def get_pipeline_types() -> List[PipelineConfigDto]:
+        return [PipelineConfigDto(pipeline) for pipeline in available_pipelines.values()]
 
     @app.get(api_base_url + "/pipelines")
     async def get_pipelines() -> List[PipelineDto]:
