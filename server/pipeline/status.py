@@ -12,3 +12,4 @@ class EventType(Enum):
     ERROR = "ERROR"
     WARNING = "WARNING"
     DEBUG = "DEBUG"
+    RESULT = "RESULT"
