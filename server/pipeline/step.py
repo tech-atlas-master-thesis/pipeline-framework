@@ -1,7 +1,7 @@
 import datetime
 import threading
 from dataclasses import dataclass
-from typing import List, Self, Optional, NamedTuple
+from typing import List, Self, Optional, Any
 
 from .config import StepConfig
 from .dto import StepDto
@@ -47,6 +47,7 @@ class Step:
         self.pipeline = pipeline
         self.dependent_steps: List[Self] = []
         self.events: List[Event] = []
+        self.result: Any = None
         for dependency in dependencies:
             dependency.dependent_steps.append(self)
         # TODO: write to DB
@@ -65,7 +66,10 @@ class Step:
         try:
             async for event, event_type in self.step_config.run():
                 print(event)
-                self.events.append(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
+                if event_type == EventType.RESULT:
+                    self.result = event
+                else:
+                    self.events.append(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
             # TODO: save event
         except Exception as e:
             self.events.append(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))
@@ -79,4 +83,4 @@ class Step:
         return self.step_config.display_name()
 
     def serialize(self) -> StepDto:
-        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result={} )
+        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result=str(self.result) )
