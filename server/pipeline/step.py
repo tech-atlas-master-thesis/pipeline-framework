@@ -1,10 +1,14 @@
 import datetime
+import json
 import threading
 from dataclasses import dataclass
 from typing import List, Self, Optional, Any
 
+import pandas as pd
+from starlette.responses import StreamingResponse, Response
+
 from .config import StepConfig
-from .dto import StepDto
+from .dto import StepDto, StepResultDto, StepResultType
 from .lock import pipelineMutex
 from .pipeline import PipelineState
 from .status import EventType
@@ -65,16 +69,45 @@ class Step:
         self.events.append(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
             async for event, event_type in self.step_config.run():
-                print(event)
                 if event_type == EventType.RESULT:
+                    print("Result received")
                     self.result = event
                 else:
+                    print(event)
                     self.events.append(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
             # TODO: save event
         except Exception as e:
             self.events.append(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))
             raise e
         self.events.append(Event(datetime.datetime.now(), "Pipeline step ended", EventType.INFO))
+
+    def _get_result_dto(self) -> Optional[StepResultDto]:
+        if self.result is None:
+            return None
+
+        print(type(self.result), isinstance(self.result, pd.DataFrame))
+        if isinstance(self.result, pd.DataFrame) or isinstance(self.result, pd.Series):
+            print(self.result.to_string(max_cols=2, max_rows=2))
+            return StepResultDto(StepResultType.CSV, True, self.result.to_string(max_cols=5, max_rows=25))
+
+        if isinstance(self.result, dict):
+            return StepResultDto(StepResultType.JSON, True, json.dumps(self.result))
+
+        return StepResultDto(StepResultType.STRING, False, str(self.result))
+
+    def get_result(self) -> Optional[Response]:
+        if self.result is None:
+            return None
+
+        if isinstance(self.result, pd.DataFrame) or isinstance(self.result, pd.Series):
+            response = Response(self.result.to_csv(), media_type="text/csv")
+            response.headers["Content-Disposition"] = f"inline; filename='pipeline_{self.pipeline.id}-{self.name()}-{self.events[-1].timestamp.isoformat()}.csv'"
+            return response
+
+        if isinstance(self.result, dict):
+            return Response(json.dumps(self.result), media_type="application/json")
+
+        return Response(str(self.result), media_type="text/plain")
 
     def name(self) -> str:
         return self.step_config.name()
@@ -83,4 +116,4 @@ class Step:
         return self.step_config.display_name()
 
     def serialize(self) -> StepDto:
-        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result=str(self.result) )
+        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result=self._get_result_dto() )

@@ -65,4 +65,4 @@ class Pipeline:
         return self.config.name
 
     def serialize(self) -> PipelineDto:
-        return PipelineDto(id=self.id, name=self.name, state=self.state, display_name=self.config.display_name )
+        return PipelineDto(id=self.id, name=self.name, state=self.state, displayName=self.config.display_name )

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import List, Any
 
 from pipelineFramework.server.pipeline.status import PipelineState
@@ -9,7 +10,7 @@ class PipelineDto:
     id: int
     name: str
     state: PipelineState
-    display_name: str
+    displayName: str
 
 @dataclass
 class StepDto:
@@ -18,4 +19,15 @@ class StepDto:
     name: str
     displayName: str
     events: List
-    result: Any
+    result: StepResultDto
+
+class StepResultType(Enum):
+    STRING = "STRING"
+    JSON = "JSON"
+    CSV = "CSV"
+
+@dataclass
+class StepResultDto:
+    type: StepResultType
+    preview: bool
+    data: Any

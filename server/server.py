@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 from typing import List
 
 from .pipeline.config import PipelineConfig
@@ -41,6 +42,7 @@ class PipelineServer:
             logger.debug(f"Finished executing step, '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id})")
         except Exception as e:
             with pipelineMutex:
+                logger.debug(traceback.format_exc())
                 logger.warning(f"Step '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id}) ran into an error ({e})")
                 step.set_state(PipelineState.ERROR)
                 return
