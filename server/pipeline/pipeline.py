@@ -19,7 +19,7 @@ class Pipeline:
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize
         for step_config in pipeline_config.steps:
-            user_step_config = user_config.get(step_config.name())
+            user_step_config = user_config.get(step_config.name()) if user_config else None
             if parallelize:
                 dependencies = [self.steps[step_name] for step_name in step_config.dependencies()] if step_config.dependencies() else []
                 if any(dependency is None for dependency in dependencies):
