@@ -2,17 +2,14 @@ import datetime
 import json
 import threading
 from dataclasses import dataclass
-from typing import List, Self, Optional, Any, Dict
+from typing import List, Self, Optional, Any
 
 import pandas as pd
-from starlette.responses import StreamingResponse, Response
+from starlette.responses import Response
 
-from .config import StepConfig, UserConfigValue
-from .dto import StepDto, StepResultDto, StepResultType
 from .lock import pipelineMutex
-from .pipeline import PipelineState
-from .status import EventType
-from ..api import UserStepConfig
+from ..api.dto import StepDto, StepResultDto, StepResultType
+from ..config import StepConfig, UserStepConfig, PipelineState, EventType
 
 
 @dataclass
@@ -22,7 +19,7 @@ class Event:
     type: EventType
 
 
-class _Pipeline():
+class _Pipeline:
     """Dummy class"""
     def get_updated_state(self):
         """Trigger to check state of every step and derive step for pipeline"""

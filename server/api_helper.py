@@ -1,57 +1,12 @@
-from dataclasses import dataclass
-from dataclasses import dataclass
-from types import UnionType
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from starlette.responses import Response
 
-from pipelineFramework import PipelineServer
-from pipelineFramework.server.pipeline.config import PipelineConfig, StepConfig, StepUserConfig, UserConfigValue
-from pipelineFramework.server.pipeline.dto import PipelineDto, StepDto
-from pipelineFramework.server.pipeline.pipeline import Pipeline
-from pipelineFramework.server.pipeline.step import Step
-
-
-UserStepConfig = Dict[str, UserConfigValue]
-UserConfig = Dict[str, UserStepConfig]
-
-class PipelineCreation(BaseModel):
-    name: str
-    config: Optional[UserConfig] = None
-
-
-@dataclass
-class _LocalisationString:
-    en: str
-    de: str
-
-LocalisationString = UnionType[_LocalisationString, str]
-
-
-@dataclass
-class StepConfigDto:
-    name: str
-    displayName: LocalisationString
-    userConfig: List[StepUserConfig]
-
-    def __init__(self, step: StepConfig):
-        self.name = step.name()
-        self.displayName = step.display_name()
-        self.userConfig = step.user_config()
-
-
-@dataclass
-class PipelineConfigDto:
-    name: str
-    displayName: LocalisationString
-    steps: List[StepConfigDto]
-
-    def __init__(self, pipeline: PipelineConfig):
-        self.name = pipeline.name
-        self.displayName = pipeline.display_name
-        self.steps = [StepConfigDto(step) for step in pipeline.steps]
+from .api.dto import PipelineDto, StepDto, PipelineConfigDto, StepConfigDto, PipelineCreation
+from .config import PipelineConfig
+from .pipeline import Pipeline, Step
+from .server import PipelineServer
 
 
 def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str) -> None:
@@ -107,4 +62,4 @@ def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline
     async def create_pipeline(pipeline: PipelineCreation) -> PipelineDto:
         if pipeline.name not in available_pipelines or not (config := available_pipelines[pipeline.name]):
             raise HTTPException(status_code=404, detail="pipeline not found")
-        return pipeline_server.add_pipeline(config, pipeline).serialize()
+        return pipeline_server.add_pipeline(config, pipeline.config).serialize()

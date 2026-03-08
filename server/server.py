@@ -3,11 +3,10 @@ import logging
 import traceback
 from typing import List, Optional
 
-from .api import UserConfig
-from .pipeline.config import PipelineConfig
+from .config.config import PipelineConfig, UserConfig
+from .config.status import PipelineState
 from .pipeline.lock import pipelineMutex
 from .pipeline.pipeline import Pipeline
-from .pipeline.status import PipelineState
 from .pipeline.step import Step
 
 logger = logging.getLogger(__name__)

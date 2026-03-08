@@ -1,8 +1,8 @@
 import asyncio
 import logging
 
-from server import PipelineServer, StepConfig, PipelineConfig, PipelineState
-from tests.test_helper import execute_test
+from pipelineFramework import PipelineServer, StepConfig, PipelineConfig, PipelineState
+from pipelineFramework.tests.test_helper import execute_test
 
 logging.basicConfig(level=logging.DEBUG)
 

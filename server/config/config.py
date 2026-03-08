@@ -4,9 +4,20 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Union, Optional, Dict
 
-from pipelineFramework.server.api import LocalisationString, UserStepConfig
 
 UserConfigValue = Union[str, int, float, Dict[str, str], List[str], datetime.datetime]
+
+UserStepConfig = Dict[str, UserConfigValue]
+UserConfig = Dict[str, UserStepConfig]
+
+
+@dataclass
+class LocalisationString:
+    en: str
+    de: str
+
+LocalisationStringType = LocalisationString | str
+
 
 @dataclass
 class StepUserConfig:
@@ -20,7 +31,7 @@ class StepUserConfig:
         DATE = "DATE"
 
     name: str
-    displayValue: LocalisationString
+    displayValue: LocalisationStringType
     type: StepUserConfigType
     defaultValue: Optional[UserConfigValue] = None
     enumValue: Optional[List[str]] = None
@@ -28,7 +39,7 @@ class StepUserConfig:
 
 class StepConfig(metaclass=ABCMeta):
     @abstractmethod
-    async def run(self, user_config: Optional[UserStepConfig]):
+    async def run(self, user_config: Optional[UserStepConfig] = None):
         yield
         raise NotImplementedError("Execution function not implemented")
 
@@ -37,10 +48,10 @@ class StepConfig(metaclass=ABCMeta):
         raise NotImplemented("Name not implemented")
 
     @abstractmethod
-    def display_name(self) -> LocalisationString:
+    def display_name(self) -> LocalisationStringType:
         raise NotImplemented("Name not implemented")
 
-    def description(self) -> Optional[LocalisationString]:
+    def description(self) -> Optional[LocalisationStringType]:
         return None
 
     def user_config(self) -> List[StepUserConfig]:
@@ -52,7 +63,7 @@ class StepConfig(metaclass=ABCMeta):
 @dataclass
 class PipelineConfig:
     name: str
-    display_name: LocalisationString
+    display_name: LocalisationStringType
     parallelize: bool
     steps: List[StepConfig]
-    description: Optional[LocalisationString]
+    description: Optional[LocalisationStringType] = None

@@ -1,12 +1,11 @@
 import threading
 from typing import Dict, Optional
 
-from .config import PipelineConfig
-from .dto import PipelineDto
+from ..api.dto import PipelineDto
+from ..config.config import PipelineConfig, UserConfig
+from ..config.status import PipelineState
 from .lock import pipelineMutex
-from .status import PipelineState
 from .step import Step
-from ..api import UserConfig
 
 
 class Pipeline:

@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Callable
 
-from server import *
+from pipelineFramework import PipelineServer, PipelineState
 
 
 async def check_running(pipeline_server: PipelineServer, timeout: float):
