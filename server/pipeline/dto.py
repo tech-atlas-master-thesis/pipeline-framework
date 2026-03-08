@@ -12,15 +12,6 @@ class PipelineDto:
     state: PipelineState
     displayName: str
 
-@dataclass
-class StepDto:
-    id: int
-    state: PipelineState
-    name: str
-    displayName: str
-    events: List
-    result: StepResultDto
-
 class StepResultType(Enum):
     STRING = "STRING"
     JSON = "JSON"
@@ -31,3 +22,12 @@ class StepResultDto:
     type: StepResultType
     preview: bool
     data: Any
+
+@dataclass
+class StepDto:
+    id: int
+    state: PipelineState
+    name: str
+    displayName: str
+    events: List
+    result: StepResultDto

@@ -1,8 +1,9 @@
 import asyncio
 import logging
 import traceback
-from typing import List
+from typing import List, Optional
 
+from .api import UserConfig
 from .pipeline.config import PipelineConfig
 from .pipeline.lock import pipelineMutex
 from .pipeline.pipeline import Pipeline
@@ -18,8 +19,8 @@ class PipelineServer:
     def __init__(self):
         self.pipelines: List[Pipeline] = []
 
-    def add_pipeline(self, pipeline_config: PipelineConfig) -> Pipeline:
-        pipeline = Pipeline(pipeline_config)
+    def add_pipeline(self, pipeline_config: PipelineConfig, user_config: Optional[UserConfig]) -> Pipeline:
+        pipeline = Pipeline(pipeline_config, user_config)
         self.pipelines.append(pipeline)
         logger.info(f"Added pipeline '{pipeline.name}'")
         with pipelineMutex:

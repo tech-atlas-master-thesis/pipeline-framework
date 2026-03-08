@@ -2,16 +2,18 @@ import datetime
 import json
 import threading
 from dataclasses import dataclass
-from typing import List, Self, Optional, Any
+from typing import List, Self, Optional, Any, Dict
 
 import pandas as pd
 from starlette.responses import StreamingResponse, Response
 
-from .config import StepConfig
+from .config import StepConfig, UserConfigValue
 from .dto import StepDto, StepResultDto, StepResultType
 from .lock import pipelineMutex
 from .pipeline import PipelineState
 from .status import EventType
+from ..api import UserStepConfig
+
 
 @dataclass
 class Event:
@@ -43,7 +45,7 @@ class Step:
     counter_lock = threading.Lock()
     id_counter = 0
 
-    def __init__(self, step_config: StepConfig, pipeline: _Pipeline, dependencies: List[Self]):
+    def __init__(self, step_config: StepConfig, user_config: Optional[UserStepConfig], pipeline: _Pipeline, dependencies: List[Self]):
         self.id: Optional[int] = None
         self.state = PipelineState.OPEN
         self.step_config = step_config
@@ -52,6 +54,7 @@ class Step:
         self.dependent_steps: List[Self] = []
         self.events: List[Event] = []
         self.result: Any = None
+        self.user_config = user_config
         for dependency in dependencies:
             dependency.dependent_steps.append(self)
         # TODO: write to DB
@@ -68,7 +71,7 @@ class Step:
     async def run(self):
         self.events.append(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
-            async for event, event_type in self.step_config.run():
+            async for event, event_type in self.step_config.run(self.user_config):
                 if event_type == EventType.RESULT:
                     print("Result received")
                     self.result = event

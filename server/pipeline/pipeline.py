@@ -6,26 +6,28 @@ from .dto import PipelineDto
 from .lock import pipelineMutex
 from .status import PipelineState
 from .step import Step
+from ..api import UserConfig
 
 
 class Pipeline:
     counter_lock = threading.Lock()
     id_counter = 0
 
-    def __init__(self, pipeline_config: PipelineConfig):
+    def __init__(self, pipeline_config: PipelineConfig, user_config: Optional[UserConfig]):
         self.config = pipeline_config
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize
         for step_config in pipeline_config.steps:
+            user_step_config = user_config.get(step_config.name())
             if parallelize:
                 dependencies = [self.steps[step_name] for step_name in step_config.dependencies()] if step_config.dependencies() else []
                 if any(dependency is None for dependency in dependencies):
                     raise NameError(f"Step {step_config.name} is not (yet) defined")
             else:
                 dependencies = [previous_step] if previous_step is not None else []
-            step = Step(step_config, self, dependencies)
+            step = Step(step_config, user_step_config, self, dependencies)
             self.steps[step_config.name()] = step
             if not parallelize:
                 previous_step = step
