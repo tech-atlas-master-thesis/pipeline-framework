@@ -30,12 +30,12 @@ class StepConfigDto:
 class PipelineConfigDto:
     name: str
     displayName: LocalisationStringType
-    steps: List[StepConfigDto]
+    description: LocalisationStringType
 
     def __init__(self, pipeline: PipelineConfig):
         self.name = pipeline.name
         self.displayName = pipeline.display_name
-        self.steps = [StepConfigDto(step) for step in pipeline.steps]
+        self.description = pipeline.description
 
 
 @dataclass
