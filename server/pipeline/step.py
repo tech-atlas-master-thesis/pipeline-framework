@@ -1,22 +1,14 @@
 import datetime
 import json
 import threading
-from dataclasses import dataclass
 from typing import List, Self, Optional, Any
 
 import pandas as pd
 from starlette.responses import Response
 
 from .lock import pipelineMutex
-from ..api.dto import StepDto, StepResultDto, StepResultType
+from ..api.dto import StepDto, StepResultDto, StepResultType, Event
 from ..config import StepConfig, UserStepConfig, PipelineState, EventType
-
-
-@dataclass
-class Event:
-    timestamp: datetime.datetime
-    message: str
-    type: EventType
 
 
 class _Pipeline:

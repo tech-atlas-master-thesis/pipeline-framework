@@ -1,12 +1,19 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import List, Optional, Any
 
 from pydantic import BaseModel
 
 from ..config import PipelineConfig, StepConfig, StepUserConfig, \
-    LocalisationString, UserConfig, PipelineState
-from ..config.config import LocalisationStringType
+    LocalisationStringType, UserConfig, PipelineState, EventType
+
+
+@dataclass
+class Event:
+    timestamp: datetime
+    message: str
+    type: EventType
 
 
 class PipelineCreation(BaseModel):
@@ -18,7 +25,8 @@ class PipelineCreation(BaseModel):
 class StepConfigDto:
     name: str
     displayName: LocalisationStringType
-    userConfig: List[StepUserConfig]
+    description: Optional[LocalisationStringType] = None
+    userConfig: List[StepUserConfig] = field(default_factory=list)
 
     def __init__(self, step: StepConfig):
         self.name = step.name()
@@ -43,7 +51,8 @@ class PipelineDto:
     id: int
     name: str
     state: PipelineState
-    displayName: str
+    description: LocalisationStringType
+    displayName: LocalisationStringType
 
 
 class StepResultType(Enum):
@@ -64,6 +73,7 @@ class StepDto:
     id: int
     state: PipelineState
     name: str
-    displayName: str
-    events: List
+    displayName: LocalisationStringType
+    description: LocalisationStringType
+    events: List[Event]
     result: StepResultDto

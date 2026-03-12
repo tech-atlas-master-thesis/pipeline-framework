@@ -31,10 +31,10 @@ class StepUserConfig:
         DATE = "DATE"
 
     name: str
-    displayValue: LocalisationStringType
+    displayName: LocalisationStringType
     type: StepUserConfigType
     defaultValue: Optional[UserConfigValue] = None
-    enumValue: Optional[List[str]] = None
+    enumValues: Optional[List[str]] = None
 
 
 class StepConfig(metaclass=ABCMeta):
