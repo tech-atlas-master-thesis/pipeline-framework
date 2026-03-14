@@ -20,6 +20,13 @@ LocalisationStringType = LocalisationString | str
 
 
 @dataclass
+class UserConfigEnumDto:
+    name: str
+    displayName: LocalisationStringType
+    description: LocalisationStringType
+
+
+@dataclass
 class StepUserConfig:
     class StepUserConfigType(Enum):
         STRING = "STRING"
@@ -32,9 +39,10 @@ class StepUserConfig:
 
     name: str
     displayName: LocalisationStringType
+    description: Optional[LocalisationStringType]
     type: StepUserConfigType
     defaultValue: Optional[UserConfigValue] = None
-    enumValues: Optional[List[str]] = None
+    enumValues: Optional[List[UserConfigEnumDto]] = None
 
 
 class StepConfig(metaclass=ABCMeta):
@@ -44,7 +52,7 @@ class StepConfig(metaclass=ABCMeta):
         raise NotImplementedError("Execution function not implemented")
 
     @abstractmethod
-    def name(self) -> str:
+    def name(self) -> LocalisationStringType:
         raise NotImplemented("Name not implemented")
 
     @abstractmethod

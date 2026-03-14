@@ -13,7 +13,10 @@ def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline
     available_pipelines = {pipeline.name: pipeline for pipeline in pipeline_config}
 
     def get_pipeline_by_id(pipeline_id: int) -> Optional[Pipeline]:
-        return [pipeline for pipeline in pipeline_server.pipelines if pipeline.id == pipeline_id][0]
+        pipeline = [pipeline for pipeline in pipeline_server.pipelines if pipeline.id == pipeline_id]
+        if len(pipeline) < 1:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return pipeline[0]
 
     def get_step_by_id(pipeline_id: int, step_id: int) -> Optional[Step]:
         pipeline = get_pipeline_by_id(pipeline_id)

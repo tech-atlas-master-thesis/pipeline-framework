@@ -53,6 +53,7 @@ class PipelineDto:
     state: PipelineState
     description: LocalisationStringType
     displayName: LocalisationStringType
+    userConfig: Optional[UserConfig]
 
 
 class StepResultType(Enum):

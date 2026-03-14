@@ -62,10 +62,8 @@ class Step:
         try:
             async for event, event_type in self.step_config.run(self.user_config):
                 if event_type == EventType.RESULT:
-                    print("Result received")
                     self.result = event
                 else:
-                    print(event)
                     self.events.append(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
             # TODO: save event
         except Exception as e:
@@ -77,9 +75,7 @@ class Step:
         if self.result is None:
             return None
 
-        print(type(self.result), isinstance(self.result, pd.DataFrame))
         if isinstance(self.result, pd.DataFrame) or isinstance(self.result, pd.Series):
-            print(self.result.to_string(max_cols=2, max_rows=2))
             return StepResultDto(StepResultType.CSV, True, self.result.to_string(max_cols=5, max_rows=25))
 
         if isinstance(self.result, dict):
@@ -108,4 +104,4 @@ class Step:
         return self.step_config.display_name()
 
     def serialize(self) -> StepDto:
-        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result=self._get_result_dto() )
+        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result=self._get_result_dto(), description=self.step_config.description() )

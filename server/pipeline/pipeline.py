@@ -16,6 +16,7 @@ class Pipeline:
         self.config = pipeline_config
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
+        self.user_config = user_config
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize
         for step_config in pipeline_config.steps:
@@ -66,4 +67,4 @@ class Pipeline:
         return self.config.name
 
     def serialize(self) -> PipelineDto:
-        return PipelineDto(id=self.id, name=self.name, state=self.state, displayName=self.config.display_name )
+        return PipelineDto(id=self.id, name=self.name, state=self.state, displayName=self.config.display_name, description=self.config.description, userConfig=self.user_config )
