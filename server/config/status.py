@@ -7,6 +7,7 @@ class PipelineState(Enum):
     ERROR = "ERROR"
     FINISHED = "FINISHED"
 
+
 class EventType(Enum):
     INFO = "INFO"
     ERROR = "ERROR"

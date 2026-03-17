@@ -13,13 +13,14 @@ from ..config import StepConfig, UserStepConfig, PipelineState, EventType
 
 class _Pipeline:
     """Dummy class"""
+
     def get_updated_state(self):
         """Trigger to check state of every step and derive step for pipeline"""
         pass
 
     @property
     def name(self) -> str:
-        return ''
+        return ""
 
     @property
     def state(self) -> PipelineState:
@@ -34,7 +35,13 @@ class Step:
     counter_lock = threading.Lock()
     id_counter = 0
 
-    def __init__(self, step_config: StepConfig, user_config: Optional[UserStepConfig], pipeline: _Pipeline, dependencies: List[Self]):
+    def __init__(
+        self,
+        step_config: StepConfig,
+        user_config: Optional[UserStepConfig],
+        pipeline: _Pipeline,
+        dependencies: List[Self],
+    ):
         self.id: Optional[int] = None
         self.state = PipelineState.OPEN
         self.step_config = step_config
@@ -64,7 +71,9 @@ class Step:
                 if event_type == EventType.RESULT:
                     self.result = event
                 else:
-                    self.events.append(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
+                    self.events.append(
+                        Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO)
+                    )
             # TODO: save event
         except Exception as e:
             self.events.append(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))
@@ -89,7 +98,9 @@ class Step:
 
         if isinstance(self.result, pd.DataFrame) or isinstance(self.result, pd.Series):
             response = Response(self.result.to_csv(), media_type="text/csv")
-            response.headers["Content-Disposition"] = f"inline; filename='pipeline_{self.pipeline.id}-{self.name()}-{self.events[-1].timestamp.isoformat()}.csv'"
+            response.headers["Content-Disposition"] = (
+                f"inline; filename='pipeline_{self.pipeline.id}-{self.name()}-{self.events[-1].timestamp.isoformat()}.csv'"
+            )
             return response
 
         if isinstance(self.result, dict):
@@ -104,4 +115,12 @@ class Step:
         return self.step_config.display_name()
 
     def serialize(self) -> StepDto:
-        return StepDto(id=self.id, name=self.name(), state=self.state, displayName=self.display_name(), events=self.events, result=self._get_result_dto(), description=self.step_config.description() )
+        return StepDto(
+            id=self.id,
+            name=self.name(),
+            state=self.state,
+            displayName=self.display_name(),
+            events=self.events,
+            result=self._get_result_dto(),
+            description=self.step_config.description(),
+        )

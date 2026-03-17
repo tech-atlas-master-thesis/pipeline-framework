@@ -12,7 +12,11 @@ async def check_running(pipeline_server: PipelineServer, timeout: float):
                 return True
 
 
-def execute_test(test_runner: Callable[PipelineServer, None], test_check: Callable[PipelineServer, bool] = lambda _: True, timeout: float = 5):
+def execute_test(
+    test_runner: Callable[PipelineServer, None],
+    test_check: Callable[PipelineServer, bool] = lambda _: True,
+    timeout: float = 5,
+):
     pipeline_server = PipelineServer()
     event_loop = asyncio.new_event_loop()
 

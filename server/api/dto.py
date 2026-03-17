@@ -5,8 +5,15 @@ from typing import List, Optional, Any
 
 from pydantic import BaseModel
 
-from ..config import PipelineConfig, StepConfig, StepUserConfig, \
-    LocalisationStringType, UserConfig, PipelineState, EventType
+from ..config import (
+    PipelineConfig,
+    StepConfig,
+    StepUserConfig,
+    LocalisationStringType,
+    UserConfig,
+    PipelineState,
+    EventType,
+)
 
 
 @dataclass

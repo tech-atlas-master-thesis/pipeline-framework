@@ -1,11 +1,11 @@
 import threading
 from typing import Dict, Optional
 
+from .lock import pipelineMutex
+from .step import Step
 from ..api.dto import PipelineDto
 from ..config.config import PipelineConfig, UserConfig
 from ..config.status import PipelineState
-from .lock import pipelineMutex
-from .step import Step
 
 
 class Pipeline:
@@ -22,7 +22,11 @@ class Pipeline:
         for step_config in pipeline_config.steps:
             user_step_config = user_config.get(step_config.name()) if user_config else None
             if parallelize:
-                dependencies = [self.steps[step_name] for step_name in step_config.dependencies()] if step_config.dependencies() else []
+                dependencies = (
+                    [self.steps[step_name] for step_name in step_config.dependencies()]
+                    if step_config.dependencies()
+                    else []
+                )
                 if any(dependency is None for dependency in dependencies):
                     raise NameError(f"Step {step_config.name} is not (yet) defined")
             else:
@@ -67,4 +71,11 @@ class Pipeline:
         return self.config.name
 
     def serialize(self) -> PipelineDto:
-        return PipelineDto(id=self.id, name=self.name, state=self.state, displayName=self.config.display_name, description=self.config.description, userConfig=self.user_config )
+        return PipelineDto(
+            id=self.id,
+            name=self.name,
+            state=self.state,
+            displayName=self.config.display_name,
+            description=self.config.description,
+            userConfig=self.user_config,
+        )

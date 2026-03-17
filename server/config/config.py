@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Union, Optional, Dict
 
-
 UserConfigValue = Union[str, int, float, Dict[str, str], List[str], datetime.datetime]
 
 UserStepConfig = Dict[str, UserConfigValue]
@@ -15,6 +14,7 @@ UserConfig = Dict[str, UserStepConfig]
 class LocalisationString:
     en: str
     de: str
+
 
 LocalisationStringType = LocalisationString | str
 
@@ -67,6 +67,7 @@ class StepConfig(metaclass=ABCMeta):
 
     def dependencies(self) -> Union[List[str], None]:
         return None
+
 
 @dataclass
 class PipelineConfig:

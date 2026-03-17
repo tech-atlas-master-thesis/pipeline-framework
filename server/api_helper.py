@@ -9,7 +9,9 @@ from .pipeline import Pipeline, Step
 from .server import PipelineServer
 
 
-def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str) -> None:
+def add_common_api_calls(
+    app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str
+) -> None:
     available_pipelines = {pipeline.name: pipeline for pipeline in pipeline_config}
 
     def get_pipeline_by_id(pipeline_id: int) -> Optional[Pipeline]:
@@ -31,7 +33,7 @@ def add_common_api_calls(app: FastAPI, pipeline_server: PipelineServer, pipeline
         return [PipelineConfigDto(pipeline) for pipeline in available_pipelines.values()]
 
     @app.get(api_base_url + "/config/pipeline-types/{pipeline_type}")
-    async def get_pipeline_type_config(pipeline_type:str) -> List[StepConfigDto]:
+    async def get_pipeline_type_config(pipeline_type: str) -> List[StepConfigDto]:
         pipeline = available_pipelines.get(pipeline_type)
         if not pipeline:
             raise HTTPException(status_code=404, detail=f"Pipeline type '{pipeline_type}' not found")

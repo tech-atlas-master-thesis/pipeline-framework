@@ -25,7 +25,9 @@ class PipelineServer:
         with pipelineMutex:
             for _, pipeline_step in pipeline.steps.items():
                 if all(dependency.state == PipelineState.FINISHED for dependency in pipeline_step.dependencies):
-                    logger.debug(f"Added pipeline step, '{pipeline_step.name()}' ({pipeline_step.id}) from pipeline '{pipeline.name}' ({pipeline.id})")
+                    logger.debug(
+                        f"Added pipeline step, '{pipeline_step.name()}' ({pipeline_step.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
+                    )
                     self.running_tasks.append(asyncio.create_task(self._execute_step(pipeline_step)))
         return pipeline
 
@@ -39,11 +41,15 @@ class PipelineServer:
 
         try:
             await step.run()
-            logger.debug(f"Finished executing step, '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id})")
+            logger.debug(
+                f"Finished executing step, '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
+            )
         except Exception as e:
             with pipelineMutex:
                 logger.debug(traceback.format_exc())
-                logger.warning(f"Step '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id}) ran into an error ({e})")
+                logger.warning(
+                    f"Step '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id}) ran into an error ({e})"
+                )
                 step.set_state(PipelineState.ERROR)
                 return
 
@@ -57,5 +63,7 @@ class PipelineServer:
                 if dependent.state != PipelineState.OPEN:
                     continue
                 if all(dependency.state == PipelineState.FINISHED for dependency in dependent.dependencies):
-                    logger.debug(f"Added pipeline step, '{dependent.name()}' ({dependent.id}) from pipeline '{pipeline.name}' ({pipeline.id})")
+                    logger.debug(
+                        f"Added pipeline step, '{dependent.name()}' ({dependent.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
+                    )
                     asyncio.create_task(self._execute_step(dependent))
