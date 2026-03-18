@@ -1,24 +1,31 @@
 import threading
 from typing import Dict, Optional
 
+from bson import ObjectId
+from pygments.lexers import q
+from pymongo.synchronous.collection import Collection
+from pymongo.synchronous.database import Database
+
 from .lock import pipelineMutex
 from .step import Step
-from ..api.dto import PipelineDto
-from ..config.config import PipelineConfig, UserConfig
-from ..config.status import PipelineState
+from ..api import PipelineDto
+from ..config import PipelineConfig, UserConfig, PipelineState
+from ..db import PipelineEntity
 
 
 class Pipeline:
-    counter_lock = threading.Lock()
-    id_counter = 0
-
-    def __init__(self, pipeline_config: PipelineConfig, user_config: Optional[UserConfig]):
+    def __init__(self, pipeline_config: PipelineConfig, user_config: Optional[UserConfig], pipeline_db: Database):
+        self.pipeline_db: Collection = pipeline_db.get_collection("pipelines")
         self.config = pipeline_config
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
         self.user_config = user_config
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize
+        print(PipelineEntity(None, self.config.name, self.config.name, self.state, self.user_config).to_json())
+        self.id: ObjectId = self.pipeline_db.insert_one(
+            {"type": self.config.name, "name": self.config.name, "state": self.state, "userConfig": self.user_config}
+        ).inserted_id
         for step_config in pipeline_config.steps:
             user_step_config = user_config.get(step_config.name()) if user_config else None
             if parallelize:
@@ -31,21 +38,17 @@ class Pipeline:
                     raise NameError(f"Step {step_config.name} is not (yet) defined")
             else:
                 dependencies = [previous_step] if previous_step is not None else []
-            step = Step(step_config, user_step_config, self, dependencies)
+            step = Step(step_config, user_step_config, self, dependencies, pipeline_db)
             self.steps[step_config.name()] = step
             if not parallelize:
                 previous_step = step
-        # TODO: write to DB
-        with Pipeline.counter_lock:
-            self.id: Optional[int] = Pipeline.id_counter
-            Pipeline.id_counter += 1
 
     def get_updated_state(self):
         assert pipelineMutex.locked()
         old_state = self.state
         self.state = self._get_state()
         if old_state != self.state:
-            # TODO: write to BD
+            self.pipeline_db.update_one({"_id": self.id}, {"$set": {"state": self.state}})
             pass
         return self.state
 
@@ -72,7 +75,7 @@ class Pipeline:
 
     def serialize(self) -> PipelineDto:
         return PipelineDto(
-            id=self.id,
+            id=str(self.id),
             name=self.name,
             state=self.state,
             displayName=self.config.display_name,

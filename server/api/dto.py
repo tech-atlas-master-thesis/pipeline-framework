@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict, Callable
 
 from pydantic import BaseModel
 
@@ -14,6 +14,15 @@ from ..config import (
     PipelineState,
     EventType,
 )
+
+
+def _get(obj: Dict[str, Any], key: str, transformer: Optional[Callable[[Any], Any]] = None) -> Any:
+    if key not in obj:
+        return None
+    value = obj[key]
+    if transformer:
+        return transformer(value)
+    return value
 
 
 @dataclass
@@ -55,15 +64,27 @@ class PipelineConfigDto:
 
 @dataclass
 class PipelineDto:
-    id: int
+    id: str
     name: str
     state: PipelineState
     description: LocalisationStringType
     displayName: LocalisationStringType
     userConfig: Optional[UserConfig]
 
+    @classmethod
+    def from_entity(cls, entity: Dict):
+        print(entity)
+        return cls(
+            _get(entity, "_id", str),
+            _get(entity, "name"),
+            _get(entity, "state"),
+            _get(entity, "name"),
+            _get(entity, "name"),
+            _get(entity, "userConfig"),
+        )
 
-class StepResultType(Enum):
+
+class StepResultType(str, Enum):
     STRING = "STRING"
     JSON = "JSON"
     CSV = "CSV"
@@ -73,15 +94,29 @@ class StepResultType(Enum):
 class StepResultDto:
     type: StepResultType
     preview: bool
+    file: str
     data: Any
 
 
 @dataclass
 class StepDto:
-    id: int
+    id: str
     state: PipelineState
     name: str
     displayName: LocalisationStringType
     description: LocalisationStringType
     events: List[Event]
     result: StepResultDto
+
+    @classmethod
+    def from_entity(cls, entity: Dict):
+        print(entity)
+        return cls(
+            _get(entity, "_id", str),
+            _get(entity, "state"),
+            _get(entity, "name"),
+            _get(entity, "name"),
+            _get(entity, "name"),
+            _get(entity, "events"),
+            _get(entity, "result"),
+        )

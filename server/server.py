@@ -3,11 +3,10 @@ import logging
 import traceback
 from typing import List, Optional
 
-from .config.config import PipelineConfig, UserConfig
-from .config.status import PipelineState
+from .config import PipelineConfig, UserConfig, PipelineState
+from .db import get_pipeline_db_client, get_raw_db_client
+from .pipeline import Pipeline, Step
 from .pipeline.lock import pipelineMutex
-from .pipeline.pipeline import Pipeline
-from .pipeline.step import Step
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +16,11 @@ class PipelineServer:
 
     def __init__(self):
         self.pipelines: List[Pipeline] = []
+        self.pipeline_db_client = get_pipeline_db_client()
+        self.raw_db_client = get_raw_db_client()
 
     def add_pipeline(self, pipeline_config: PipelineConfig, user_config: Optional[UserConfig]) -> Pipeline:
-        pipeline = Pipeline(pipeline_config, user_config)
+        pipeline = Pipeline(pipeline_config, user_config, self.pipeline_db_client)
         self.pipelines.append(pipeline)
         logger.info(f"Added pipeline '{pipeline.name}'")
         with pipelineMutex:

@@ -28,7 +28,7 @@ class UserConfigEnumDto:
 
 @dataclass
 class StepUserConfig:
-    class StepUserConfigType(Enum):
+    class StepUserConfigType(str, Enum):
         STRING = "STRING"
         INTEGER = "INTEGER"
         FLOAT = "FLOAT"

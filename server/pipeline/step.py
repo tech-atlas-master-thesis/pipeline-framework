@@ -1,14 +1,19 @@
 import datetime
 import json
-import threading
-from typing import List, Self, Optional, Any
+from typing import List, Self, Optional, Any, Dict
+from unittest import case
 
+import gridfs
 import pandas as pd
+from bson import ObjectId
+from gridfs import GridFS
+from pymongo.synchronous.database import Database
 from starlette.responses import Response
 
 from .lock import pipelineMutex
 from ..api.dto import StepDto, StepResultDto, StepResultType, Event
 from ..config import StepConfig, UserStepConfig, PipelineState, EventType
+from ..db import get_raw_db_client
 
 
 class _Pipeline:
@@ -32,8 +37,14 @@ class _Pipeline:
 
 
 class Step:
-    counter_lock = threading.Lock()
-    id_counter = 0
+    @staticmethod
+    def get_result_http_type(type: StepResultType) -> str:
+        match type:
+            case StepResultType.JSON:
+                return "application/json"
+            case StepResultType.CSV:
+                return "text/csv"
+        return "text/plain"
 
     def __init__(
         self,
@@ -41,72 +52,113 @@ class Step:
         user_config: Optional[UserStepConfig],
         pipeline: _Pipeline,
         dependencies: List[Self],
+        pipeline_db: Database,
     ):
-        self.id: Optional[int] = None
+        self.pipeline_db = pipeline_db.get_collection("steps")
         self.state = PipelineState.OPEN
         self.step_config = step_config
         self.dependencies = dependencies
         self.pipeline = pipeline
         self.dependent_steps: List[Self] = []
         self.events: List[Event] = []
-        self.result: Any = None
+        self.result: Optional[StepResultDto] = None
         self.user_config = user_config
         for dependency in dependencies:
             dependency.dependent_steps.append(self)
-        # TODO: write to DB
-        with Step.counter_lock:
-            self.id: Optional[int] = Step.id_counter
-            Step.id_counter += 1
+        self.id: ObjectId = self.pipeline_db.insert_one(
+            {
+                "pipeline": self.pipeline.id,
+                "state": self.state,
+                "name": self.step_config.name(),
+                "events": self.events,
+                "result": self.result,
+            }
+        ).inserted_id
 
     def set_state(self, state: PipelineState):
         assert pipelineMutex.locked()
-        # TODO: write to DB
+        self.pipeline_db.update_one({"_id": self.id}, {"$set": {"state": state}})
         self.state = state
         self.pipeline.get_updated_state()
 
     async def run(self):
-        self.events.append(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
+        self._add_event(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
             async for event, event_type in self.step_config.run(self.user_config):
                 if event_type == EventType.RESULT:
-                    self.result = event
+                    self.result = self._save_result(event)
                 else:
-                    self.events.append(
-                        Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO)
-                    )
-            # TODO: save event
+                    self._add_event(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
+
         except Exception as e:
-            self.events.append(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))
+            self._add_event(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))
             raise e
-        self.events.append(Event(datetime.datetime.now(), "Pipeline step ended", EventType.INFO))
+        self._add_event(Event(datetime.datetime.now(), "Pipeline step ended", EventType.INFO))
 
-    def _get_result_dto(self) -> Optional[StepResultDto]:
-        if self.result is None:
+    def _add_event(self, event: Event):
+        self.events.append(event)
+        self.pipeline_db.update_one(
+            {"_id": self.id},
+            {
+                "$push": {
+                    "events": {
+                        "timestamp": event.timestamp,
+                        "message": event.message,
+                        "type": event.type,
+                    }
+                }
+            },
+        )
+
+    def _save_result(self, result: Any):
+        if result is None:
             return None
 
-        if isinstance(self.result, pd.DataFrame) or isinstance(self.result, pd.Series):
-            return StepResultDto(StepResultType.CSV, True, self.result.to_string(max_cols=5, max_rows=25))
+        preview = False
+        result_type = StepResultType.STRING
+        file_id = None
+        data = None
+        preview_data = None
 
-        if isinstance(self.result, dict):
-            return StepResultDto(StepResultType.JSON, True, json.dumps(self.result))
+        if isinstance(result, pd.DataFrame) or isinstance(result, pd.Series):
+            preview_data = result.to_string(max_cols=5, max_rows=25)
+            data = result.to_csv()
+            preview = True
+            result_type = StepResultType.CSV
 
-        return StepResultDto(StepResultType.STRING, False, str(self.result))
+        elif isinstance(result, dict):
+            preview_data = json.dumps(dict.fromkeys(result, "..."))
+            data = json.dumps(result)
+            preview = True
+            result_type = StepResultType.CSV
 
-    def get_result(self) -> Optional[Response]:
-        if self.result is None:
-            return None
+        if preview:
+            file_id = self._save_file(data)
 
-        if isinstance(self.result, pd.DataFrame) or isinstance(self.result, pd.Series):
-            response = Response(self.result.to_csv(), media_type="text/csv")
-            response.headers["Content-Disposition"] = (
-                f"inline; filename='pipeline_{self.pipeline.id}-{self.name()}-{self.events[-1].timestamp.isoformat()}.csv'"
-            )
-            return response
+        self.pipeline_db.update_one(
+            {"_id": self.id},
+            {
+                "$set": {
+                    "result": {
+                        "type": result_type,
+                        "preview": preview,
+                        "file": str(file_id),
+                        "data": preview_data if file_id else str(result),
+                    }
+                }
+            },
+        )
+        return StepResultDto(
+            result_type, preview, str(file_id) if file_id else None, preview_data if file_id else str(result)
+        )
 
-        if isinstance(self.result, dict):
-            return Response(json.dumps(self.result), media_type="application/json")
-
-        return Response(str(self.result), media_type="text/plain")
+    def _save_file(self, content: str) -> ObjectId:
+        file_db = gridfs.GridFS(get_raw_db_client())
+        return file_db.put(
+            content,
+            filename=f"{self.pipeline.name}-{self.pipeline.id}-{self.pipeline.name}-{self.name()}-{datetime.datetime.now().isoformat(timespec='seconds')}.csv",
+            encoding="utf-8",
+        )
 
     def name(self) -> str:
         return self.step_config.name()
@@ -116,11 +168,11 @@ class Step:
 
     def serialize(self) -> StepDto:
         return StepDto(
-            id=self.id,
+            id=str(self.id),
             name=self.name(),
             state=self.state,
             displayName=self.display_name(),
             events=self.events,
-            result=self._get_result_dto(),
+            result=None,
             description=self.step_config.description(),
         )
