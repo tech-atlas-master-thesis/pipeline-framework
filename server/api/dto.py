@@ -33,7 +33,9 @@ class Event:
 
 
 class PipelineCreation(BaseModel):
+    type: str
     name: str
+    description: str
     config: Optional[UserConfig] = None
 
 
@@ -52,12 +54,12 @@ class StepConfigDto:
 
 @dataclass
 class PipelineConfigDto:
-    name: str
+    type: str
     displayName: LocalisationStringType
     description: LocalisationStringType
 
     def __init__(self, pipeline: PipelineConfig):
-        self.name = pipeline.name
+        self.type = pipeline.type
         self.displayName = pipeline.display_name
         self.description = pipeline.description
 
@@ -65,22 +67,24 @@ class PipelineConfigDto:
 @dataclass
 class PipelineDto:
     id: str
+    type: str
     name: str
+    description: str
     state: PipelineState
-    description: LocalisationStringType
-    displayName: LocalisationStringType
     userConfig: Optional[UserConfig]
+    created: AuditInfoDto
 
     @classmethod
     def from_entity(cls, entity: Dict):
         print(entity)
         return cls(
             _get(entity, "_id", str),
+            _get(entity, "type"),
             _get(entity, "name"),
+            _get(entity, "description"),
             _get(entity, "state"),
-            _get(entity, "name"),
-            _get(entity, "name"),
             _get(entity, "userConfig"),
+            _get(entity, "created"),
         )
 
 
@@ -136,3 +140,29 @@ T = TypeVar("T")
 class PaginatedListDto(Generic[T]):
     items: List[T]
     page: PageDto
+
+
+@dataclass
+class AuditInfoDto:
+    by: UserDto
+    at: datetime
+
+    def serialize(self) -> dict:
+        return {
+            "by": self.by.serialize(),
+            "at": self.at,
+        }
+
+
+@dataclass
+class UserDto:
+    id: str | int
+    name: str
+    email: Optional[str] = None
+
+    def serialize(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+        }

@@ -1,5 +1,8 @@
+import datetime
+import json
 import threading
 from typing import Dict, Optional
+from xmlrpc.client import DateTime
 
 from bson import ObjectId
 from pygments.lexers import q
@@ -8,26 +11,36 @@ from pymongo.synchronous.database import Database
 
 from .lock import pipelineMutex
 from .step import Step
-from ..api import PipelineDto
+from ..api import PipelineDto, PipelineCreation
+from ..api.dto import AuditInfoDto, UserDto
 from ..config import PipelineConfig, UserConfig, PipelineState
 from ..db import PipelineEntity
 
 
 class Pipeline:
-    def __init__(self, pipeline_config: PipelineConfig, user_config: Optional[UserConfig], pipeline_db: Database):
+    def __init__(self, pipeline_config: PipelineConfig, pipeline_creation: PipelineCreation, pipeline_db: Database):
         self.pipeline_db: Collection = pipeline_db.get_collection("pipelines")
         self.config = pipeline_config
+        self.name = pipeline_creation.name
+        self.description = pipeline_creation.description
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
-        self.user_config = user_config
+        self.user_config = pipeline_creation.config
+        self.created = AuditInfoDto(UserDto(123, "User", "user@email.com"), datetime.datetime.now(datetime.UTC))
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize
-        print(PipelineEntity(None, self.config.name, self.config.name, self.state, self.user_config).to_json())
         self.id: ObjectId = self.pipeline_db.insert_one(
-            {"type": self.config.name, "name": self.config.name, "state": self.state, "userConfig": self.user_config}
+            {
+                "type": self.config.type,
+                "name": self.name,
+                "description": self.description,
+                "state": self.state,
+                "userConfig": self.user_config,
+                "created": self.created.serialize(),
+            }
         ).inserted_id
         for step_config in pipeline_config.steps:
-            user_step_config = user_config.get(step_config.name()) if user_config else None
+            user_step_config = self.user_config.get(step_config.name()) if self.user_config else None
             if parallelize:
                 dependencies = (
                     [self.steps[step_name] for step_name in step_config.dependencies()]
@@ -49,7 +62,6 @@ class Pipeline:
         self.state = self._get_state()
         if old_state != self.state:
             self.pipeline_db.update_one({"_id": self.id}, {"$set": {"state": self.state}})
-            pass
         return self.state
 
     def _get_state(self):
@@ -70,15 +82,16 @@ class Pipeline:
         return PipelineState.FINISHED
 
     @property
-    def name(self) -> str:
-        return self.config.name
+    def type(self) -> str:
+        return self.config.type
 
     def serialize(self) -> PipelineDto:
         return PipelineDto(
             id=str(self.id),
+            type=self.type,
             name=self.name,
+            description=self.description,
             state=self.state,
-            displayName=self.config.display_name,
-            description=self.config.description,
             userConfig=self.user_config,
+            created=self.created,
         )

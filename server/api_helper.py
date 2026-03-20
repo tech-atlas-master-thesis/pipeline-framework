@@ -26,7 +26,7 @@ def add_common_api_calls(
 
 
 def _config_enpoints(app: FastAPI, pipeline_config: List[PipelineConfig], api_base_url: str):
-    available_pipelines = {pipeline.name: pipeline for pipeline in pipeline_config}
+    available_pipelines = {pipeline.type: pipeline for pipeline in pipeline_config}
 
     @app.get(api_base_url + "/config/pipeline-types")
     async def get_pipeline_types() -> List[PipelineConfigDto]:
@@ -43,7 +43,7 @@ def _config_enpoints(app: FastAPI, pipeline_config: List[PipelineConfig], api_ba
 def _pipeline_endpoints(
     app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str
 ):
-    available_pipelines = {pipeline.name: pipeline for pipeline in pipeline_config}
+    available_pipelines = {pipeline.type: pipeline for pipeline in pipeline_config}
 
     @app.get(api_base_url + "/pipelines")
     async def get_pipelines(
@@ -80,9 +80,9 @@ def _pipeline_endpoints(
 
     @app.post(api_base_url + "/pipelines")
     async def create_pipeline(pipeline: PipelineCreation) -> PipelineDto:
-        if pipeline.name not in available_pipelines or not (config := available_pipelines[pipeline.name]):
+        if pipeline.type not in available_pipelines or not (config := available_pipelines[pipeline.type]):
             raise HTTPException(status_code=404, detail="pipeline not found")
-        return pipeline_server.add_pipeline(config, pipeline.config).serialize()
+        return pipeline_server.add_pipeline(config, pipeline).serialize()
 
 
 def _step_endpoints(app: FastAPI, api_base_url: str):

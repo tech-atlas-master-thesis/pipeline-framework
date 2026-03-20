@@ -71,7 +71,7 @@ class StepConfig(metaclass=ABCMeta):
 
 @dataclass
 class PipelineConfig:
-    name: str
+    type: str
     display_name: LocalisationStringType
     parallelize: bool
     steps: List[StepConfig]

@@ -7,6 +7,7 @@ from .config import PipelineConfig, UserConfig, PipelineState
 from .db import get_pipeline_db_client, get_raw_db_client
 from .pipeline import Pipeline, Step
 from .pipeline.lock import pipelineMutex
+from .api import PipelineCreation
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,8 @@ class PipelineServer:
         self.pipeline_db_client = get_pipeline_db_client()
         self.raw_db_client = get_raw_db_client()
 
-    def add_pipeline(self, pipeline_config: PipelineConfig, user_config: Optional[UserConfig]) -> Pipeline:
-        pipeline = Pipeline(pipeline_config, user_config, self.pipeline_db_client)
+    def add_pipeline(self, pipeline_config: PipelineConfig, pipeline_creation: PipelineCreation) -> Pipeline:
+        pipeline = Pipeline(pipeline_config, pipeline_creation, self.pipeline_db_client)
         self.pipelines.append(pipeline)
         logger.info(f"Added pipeline '{pipeline.name}'")
         with pipelineMutex:

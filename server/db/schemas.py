@@ -14,6 +14,7 @@ class PipelineEntity:
     id: ObjectId
     type: str
     name: str
+    description: str
     state: PipelineState
     userConfig: Optional[UserConfig]
 
