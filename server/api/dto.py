@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Any, Dict, Callable
+from typing import List, Optional, Any, Dict, Callable, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -120,3 +120,19 @@ class StepDto:
             _get(entity, "events"),
             _get(entity, "result"),
         )
+
+
+@dataclass
+class PageDto:
+    first: int
+    rows: int
+    totalRecords: int
+
+
+T = TypeVar("T")
+
+
+@dataclass
+class PaginatedListDto(Generic[T]):
+    items: List[T]
+    page: PageDto

@@ -6,7 +6,7 @@ from bson import ObjectId
 from fastapi import FastAPI, HTTPException
 from starlette.responses import Response
 
-from .api.dto import PipelineDto, StepDto, PipelineConfigDto, StepConfigDto, PipelineCreation
+from .api.dto import PipelineDto, StepDto, PipelineConfigDto, StepConfigDto, PipelineCreation, PaginatedListDto, PageDto
 from .config import PipelineConfig
 from .pipeline import Step
 from .server import PipelineServer
@@ -50,9 +50,10 @@ def _pipeline_endpoints(
         types: Optional[List[str]] = None,
         state: Optional[List[str]] = None,
         name: Optional[str] = None,
+        sort: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
-    ) -> List[PipelineDto]:
+    ) -> PaginatedListDto[PipelineDto]:
         pipeline_db = get_pipeline_db_client()
         query = {}
         if types:
@@ -62,7 +63,10 @@ def _pipeline_endpoints(
         if name:
             query["name"] = {"$regex": re.escape(name)}
         pipelines = pipeline_db.get_collection("pipelines").find(query, skip=offset, limit=limit)
-        return [PipelineDto.from_entity(pipeline) for pipeline in pipelines]
+        total_records = pipeline_db.get_collection("pipelines").count_documents(query)
+        return PaginatedListDto(
+            [PipelineDto.from_entity(pipeline) for pipeline in pipelines], PageDto(offset, limit, total_records)
+        )
 
     @app.get(api_base_url + "/pipelines/{pipeline_id}")
     async def get_pipeline(pipeline_id: str) -> Optional[PipelineDto]:
