@@ -1,6 +1,8 @@
 import os
 from dataclasses import dataclass
 
+import gridfs
+from bson import ObjectId
 from pymongo import MongoClient
 
 
@@ -25,10 +27,15 @@ def get_raw_db_client():
     )
 
 
+def get_file_from_db(file_id: ObjectId):
+    file_db = gridfs.GridFS(get_raw_db_client())
+    file = file_db.get(file_id)
+    if not file:
+        raise FileNotFoundError(f'No file with id "{file_id}" found')
+    return file
+
+
 def _get_pipeline_client(mongo_db_url: str, login: DatabaseLogin):
     return MongoClient(
-        # f"mongodb://{login.username}:{login.password}@{mongo_db_url}/{login.database_name}&authSource=admin"
         f"mongodb://{login.username}:{login.password}@{mongo_db_url}/{login.database_name}?authSource={login.database_name}"
-        # f"mongodb://pipe_rw:12345678@{mongo_db_url}/pipelines?authSource=pipelines"
-        # f"mongodb://root:12345678@{mongo_db_url}"
     )[login.database_name]

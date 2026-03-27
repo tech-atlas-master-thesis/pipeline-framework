@@ -2,7 +2,7 @@ import datetime
 from abc import abstractmethod, ABCMeta
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Union, Optional, Dict
+from typing import List, Union, Optional, Dict, Any
 
 UserConfigValue = Union[str, int, float, Dict[str, str], List[str], datetime.datetime]
 
@@ -36,6 +36,8 @@ class StepUserConfig:
         MAPPING = "MAPPING"
         ENUM = "ENUM"
         DATE = "DATE"
+        PIPELINE = "PIPELINE"
+        STEP = "STEP"
 
     name: str
     displayName: LocalisationStringType
@@ -43,13 +45,13 @@ class StepUserConfig:
     type: StepUserConfigType
     defaultValue: Optional[UserConfigValue] = None
     enumValues: Optional[List[UserConfigEnumDto]] = None
+    pipelineType: Optional[str] = None
 
 
 class StepConfig(metaclass=ABCMeta):
     @abstractmethod
-    async def run(self, user_config: Optional[UserStepConfig] = None):
-        yield
-        raise NotImplementedError("Execution function not implemented")
+    async def run(self, user_config: Optional[UserStepConfig] = None, results: Optional[Dict[str, Any]] = None):
+        raise NotImplementedError
 
     @abstractmethod
     def name(self) -> LocalisationStringType:

@@ -1,9 +1,9 @@
 import re
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
 import gridfs
 from bson import ObjectId
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from starlette.responses import Response
 
 from .api.dto import PipelineDto, StepDto, PipelineConfigDto, StepConfigDto, PipelineCreation, PaginatedListDto, PageDto
@@ -47,8 +47,8 @@ def _pipeline_endpoints(
 
     @app.get(api_base_url + "/pipelines")
     async def get_pipelines(
-        types: Optional[List[str]] = None,
-        state: Optional[List[str]] = None,
+        type: Annotated[Optional[List[str]], Query()] = None,
+        state: Annotated[Optional[List[str]], Query()] = None,
         name: Optional[str] = None,
         sort: Optional[str] = None,
         limit: int = 20,
@@ -56,13 +56,18 @@ def _pipeline_endpoints(
     ) -> PaginatedListDto[PipelineDto]:
         pipeline_db = get_pipeline_db_client()
         query = {}
-        if types:
-            query["types"] = {"$in": types}
+        if type:
+            query["type"] = {"$in": type}
         if state:
             query["state"] = {"$in": state}
         if name:
             query["name"] = {"$regex": re.escape(name)}
-        pipelines = pipeline_db.get_collection("pipelines").find(query, skip=offset, limit=limit)
+        if sort:
+            single_sorts = (single_sort.split(":") for single_sort in sort.split(";"))
+            sort_query = {field: int(order) for field, order in single_sorts}
+        else:
+            sort_query = {"_id": -1}
+        pipelines = pipeline_db.get_collection("pipelines").find(query).sort(sort_query).skip(offset).limit(limit)
         total_records = pipeline_db.get_collection("pipelines").count_documents(query)
         return PaginatedListDto(
             [PipelineDto.from_entity(pipeline) for pipeline in pipelines], PageDto(offset, limit, total_records)

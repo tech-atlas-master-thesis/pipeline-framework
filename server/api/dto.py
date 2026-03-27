@@ -76,7 +76,6 @@ class PipelineDto:
 
     @classmethod
     def from_entity(cls, entity: Dict):
-        print(entity)
         return cls(
             _get(entity, "_id", str),
             _get(entity, "type"),
