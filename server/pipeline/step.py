@@ -19,6 +19,8 @@ from ..db import get_raw_db_client
 class _Pipeline:
     """Dummy class"""
 
+    results = {}
+
     def get_updated_state(self):
         """Trigger to check state of every step and derive step for pipeline"""
         pass
@@ -70,6 +72,8 @@ class Step:
                 "pipeline": self.pipeline.id,
                 "state": self.state,
                 "name": self.step_config.name(),
+                "displayName": self.step_config.display_name().to_json() if self.step_config.display_name() else None,
+                "description": self.step_config.description().to_json() if self.step_config.description() else None,
                 "events": self.events,
                 "result": self.result,
             }
@@ -84,8 +88,9 @@ class Step:
     async def run(self):
         self._add_event(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
-            async for event, event_type in self.step_config.run(self.user_config):
+            async for event, event_type in self.step_config.run(self.user_config, self.pipeline.results):
                 if event_type == EventType.RESULT:
+                    self.pipeline.results[self.name()] = event
                     self.result = self._save_result(event)
                 else:
                     self._add_event(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
@@ -143,7 +148,7 @@ class Step:
                         "type": result_type,
                         "preview": preview,
                         "file": str(file_id),
-                        "data": preview_data if file_id else str(result),
+                        "data": preview_data[:100] if file_id else str(result),
                     }
                 }
             },

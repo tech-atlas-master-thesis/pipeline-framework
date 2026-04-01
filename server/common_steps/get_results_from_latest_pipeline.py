@@ -32,10 +32,7 @@ class GetResultFromLatestPipeline(StepConfig):
         PIPELINE_NAME = user_config.get("PIPELINE_NAME")
         PIPELINE_STEP = user_config.get("PIPELINE_STEP")
 
-        print(user_config, PIPELINE_NAME, PIPELINE_STEP)
-
         pipeline_results = await self._get_pipeline_results(PIPELINE_NAME, PIPELINE_STEP)
-        print(pipeline_results)
         if pipeline_results is None:
             raise FileNotFoundError(
                 f'No result returned for step "{PIPELINE_STEP}" in pipeline "{PIPELINE_NAME}" found'

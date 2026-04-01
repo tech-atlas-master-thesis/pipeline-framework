@@ -26,7 +26,9 @@ class Pipeline:
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
         self.user_config = pipeline_creation.config
+        # TODO: add user info
         self.created = AuditInfoDto(UserDto(123, "User", "user@email.com"), datetime.datetime.now(datetime.UTC))
+        self.results = {}
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize
         self.id: ObjectId = self.pipeline_db.insert_one(

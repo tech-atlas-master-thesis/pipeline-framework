@@ -78,7 +78,6 @@ def _pipeline_endpoints(
         pipeline_db = get_pipeline_db_client()
         pipeline = pipeline_db.get_collection("pipelines").find_one({"_id": ObjectId(pipeline_id)})
 
-        print(pipeline_id, pipeline)
         if not pipeline:
             raise HTTPException(status_code=404, detail=f"Pipeline '{pipeline_id}' not found")
         return PipelineDto.from_entity(pipeline)
@@ -107,7 +106,6 @@ def _step_endpoints(app: FastAPI, api_base_url: str):
         )
         if step is None:
             raise HTTPException(status_code=404, detail=f"Step {step_id} with pipeline {pipeline_id} not found")
-        print(step, "result" not in step)
         if "result" not in step or "file" not in step["result"]:
             raise HTTPException(status_code=404, detail=f"Step {step_id} with pipeline {pipeline_id} has no result")
         file_id = step["result"]["file"]

@@ -15,6 +15,9 @@ class LocalisationString:
     en: str
     de: str
 
+    def to_json(self) -> Dict[str, Any]:
+        return {"en": self.en, "de": self.de}
+
 
 LocalisationStringType = LocalisationString | str
 

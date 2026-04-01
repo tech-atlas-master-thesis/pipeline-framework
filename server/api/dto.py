@@ -113,13 +113,12 @@ class StepDto:
 
     @classmethod
     def from_entity(cls, entity: Dict):
-        print(entity)
         return cls(
             _get(entity, "_id", str),
             _get(entity, "state"),
             _get(entity, "name"),
-            _get(entity, "name"),
-            _get(entity, "name"),
+            _get(entity, "displayName"),
+            _get(entity, "description"),
             _get(entity, "events"),
             _get(entity, "result"),
         )
