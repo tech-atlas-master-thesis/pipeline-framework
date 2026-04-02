@@ -1,41 +1,16 @@
 import datetime
 import json
-from typing import List, Self, Optional, Any, Dict
-from unittest import case
+from typing import List, Self, Optional, Any
 
 import gridfs
 import pandas as pd
 from bson import ObjectId
-from gridfs import GridFS
 from pymongo.synchronous.database import Database
-from starlette.responses import Response
 
 from .lock import pipelineMutex
 from ..api.dto import StepDto, StepResultDto, StepResultType, Event
-from ..config import StepConfig, UserStepConfig, PipelineState, EventType
+from ..config import StepConfig, UserStepConfig, PipelineState, EventType, PipelineDummy
 from ..db import get_raw_db_client
-
-
-class _Pipeline:
-    """Dummy class"""
-
-    results = {}
-
-    def get_updated_state(self):
-        """Trigger to check state of every step and derive step for pipeline"""
-        pass
-
-    @property
-    def name(self) -> str:
-        return ""
-
-    @property
-    def state(self) -> PipelineState:
-        return PipelineState.RUNNING
-
-    @property
-    def id(self) -> int:
-        return 0
 
 
 class Step:
@@ -52,7 +27,7 @@ class Step:
         self,
         step_config: StepConfig,
         user_config: Optional[UserStepConfig],
-        pipeline: _Pipeline,
+        pipeline: PipelineDummy,
         dependencies: List[Self],
         pipeline_db: Database,
     ):
@@ -88,7 +63,9 @@ class Step:
     async def run(self):
         self._add_event(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
-            async for event, event_type in self.step_config.run(self.user_config, self.pipeline.results):
+            async for event, event_type in self.step_config.run(
+                user_config=self.user_config, results=self.pipeline.results, pipeline=self.pipeline, step=self
+            ):
                 if event_type == EventType.RESULT:
                     self.pipeline.results[self.name()] = event
                     self.result = self._save_result(event)

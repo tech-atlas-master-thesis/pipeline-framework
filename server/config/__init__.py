@@ -7,5 +7,7 @@ from .config import (
     StepUserConfig,
     StepConfig,
     PipelineConfig,
+    PipelineDummy,
+    StepDummy,
 )
 from .status import PipelineState, EventType

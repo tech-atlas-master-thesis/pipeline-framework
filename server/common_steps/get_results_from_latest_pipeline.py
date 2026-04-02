@@ -28,7 +28,7 @@ class GetResultFromLatestPipeline(StepConfig):
         self._default_pipeline_name = default_pipeline_name
         self._default_pipeline_step = default_pipeline_step
 
-    async def run(self, user_config: Optional[UserStepConfig], results: Optional[Dict[str, Any]] = None):
+    async def run(self, user_config: Optional[UserStepConfig], results: Optional[Dict[str, Any]] = None, **_):
         PIPELINE_NAME = user_config.get("PIPELINE_NAME")
         PIPELINE_STEP = user_config.get("PIPELINE_STEP")
 

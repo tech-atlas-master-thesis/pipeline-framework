@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Union, Optional, Dict, Any
 
+from .status import PipelineState
+
 UserConfigValue = Union[str, int, float, Dict[str, str], List[str], datetime.datetime]
 
 UserStepConfig = Dict[str, UserConfigValue]
@@ -53,7 +55,14 @@ class StepUserConfig:
 
 class StepConfig(metaclass=ABCMeta):
     @abstractmethod
-    async def run(self, user_config: Optional[UserStepConfig] = None, results: Optional[Dict[str, Any]] = None):
+    async def run(
+        self,
+        user_config: Optional[UserStepConfig] = None,
+        results: Optional[Dict[str, Any]] = None,
+        pipeline: PipelineDummy = None,
+        step: StepDummy = None,
+    ):
+        yield
         raise NotImplementedError
 
     @abstractmethod
@@ -81,3 +90,47 @@ class PipelineConfig:
     parallelize: bool
     steps: List[StepConfig]
     description: Optional[LocalisationStringType] = None
+
+
+class PipelineDummy:
+    """Dummy class"""
+
+    results = {}
+
+    def get_updated_state(self):
+        """Trigger to check state of every step and derive step for pipeline"""
+        pass
+
+    @property
+    def name(self) -> str:
+        return ""
+
+    @property
+    def state(self) -> PipelineState:
+        return PipelineState.RUNNING
+
+    @property
+    def id(self) -> int:
+        return 0
+
+
+class StepDummy:
+    """Dummy class"""
+
+    results = {}
+
+    def get_updated_state(self):
+        """Trigger to check state of every step and derive step for pipeline"""
+        pass
+
+    @property
+    def name(self) -> str:
+        return ""
+
+    @property
+    def state(self) -> PipelineState:
+        return PipelineState.RUNNING
+
+    @property
+    def id(self) -> int:
+        return 0
