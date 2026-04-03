@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass
 
@@ -45,6 +46,9 @@ def get_file_from_db(file_id: ObjectId):
 
 
 def _get_pipeline_client(mongo_db_url: str, login: DatabaseLogin):
+    logging.debug(
+        f'Connecting to MongoDB database: {mongo_db_url} ({login.database_name}) login: {login.username}:{"******" if login.password else "<missing>"}'
+    )
     return MongoClient(
         f"mongodb://{login.username}:{login.password}@{mongo_db_url}/{login.database_name}?authSource={login.database_name}"
     )[login.database_name]
