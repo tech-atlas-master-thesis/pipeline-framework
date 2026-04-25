@@ -5,7 +5,7 @@ import gridfs
 import pandas as pd
 from bson import ObjectId
 
-from ..api import StepResultType
+from ..dto import StepResultType
 from ..config import StepConfig, LocalisationStringType, LocalisationString, UserStepConfig, StepUserConfig, EventType
 from ..db import get_pipeline_db_client, get_raw_db_client
 from ..db.helper import get_file_from_db
@@ -53,7 +53,7 @@ class GetResultFromLatestPipeline(StepConfig):
         if not result["preview"]:
             return result["data"]
         if not result["file"]:
-            raise FileNotFoundError(f"No file id found")
+            raise FileNotFoundError("No file id found")
         file_data = get_file_from_db(ObjectId(result["file"]))
         match (result["type"]):
             case StepResultType.CSV:

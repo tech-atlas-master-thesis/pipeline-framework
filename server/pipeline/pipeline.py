@@ -1,8 +1,5 @@
 import datetime
-import json
-import threading
 from typing import Dict, Optional
-from xmlrpc.client import DateTime
 
 from bson import ObjectId
 from pygments.lexers import q
@@ -11,14 +8,19 @@ from pymongo.synchronous.database import Database
 
 from .lock import pipelineMutex
 from .step import Step
-from ..api import PipelineDto, PipelineCreation
-from ..api.dto import AuditInfoDto, UserDto
-from ..config import PipelineConfig, UserConfig, PipelineState
-from ..db import PipelineEntity
+from ..config import PipelineConfig, PipelineState
+from ..dto import PipelineDto, PipelineCreation
+from ..dto.dto import AuditInfoDto, UserDto
 
 
 class Pipeline:
-    def __init__(self, pipeline_config: PipelineConfig, pipeline_creation: PipelineCreation, pipeline_db: Database):
+    def __init__(
+        self,
+        pipeline_config: PipelineConfig,
+        pipeline_creation: PipelineCreation,
+        pipeline_db: Database,
+        user: UserDto,
+    ):
         self.pipeline_db: Collection = pipeline_db.get_collection("pipelines")
         self.config = pipeline_config
         self.name = pipeline_creation.name
@@ -26,8 +28,7 @@ class Pipeline:
         self.steps: Dict[str, Step] = {}
         self.state = PipelineState.OPEN
         self.user_config = pipeline_creation.config
-        # TODO: add user info
-        self.created = AuditInfoDto(UserDto(123, "User", "user@email.com"), datetime.datetime.now(datetime.UTC))
+        self.created = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
         self.results = {}
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize

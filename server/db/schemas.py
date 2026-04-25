@@ -6,7 +6,7 @@ from typing import Optional, List
 from bson import ObjectId
 
 from ..config import PipelineState, UserConfig
-from ..api import StepResultType, Event
+from ..dto import StepResultType, Event
 
 
 @dataclass

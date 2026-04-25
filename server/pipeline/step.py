@@ -8,7 +8,7 @@ from bson import ObjectId
 from pymongo.synchronous.database import Database
 
 from .lock import pipelineMutex
-from ..api.dto import StepDto, StepResultDto, StepResultType, Event
+from ..dto.dto import StepDto, StepResultDto, StepResultType, Event
 from ..config import StepConfig, UserStepConfig, PipelineState, EventType, PipelineDummy
 from ..db import get_raw_db_client
 

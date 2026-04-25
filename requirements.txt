@@ -2,3 +2,4 @@ fastapi[standard]==0.124.4
 pymongo==4.16.0
 black==26.3.1
 pre-commit==4.5.1
+pyjwt[crypto]==2.12.1
