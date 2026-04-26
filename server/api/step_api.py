@@ -3,19 +3,22 @@ from typing import List
 import gridfs
 from bson import ObjectId
 from fastapi import FastAPI, HTTPException
+from fastapi.params import Depends
 from starlette.responses import Response
 
 from pipelineFramework.server.db import get_pipeline_db_client, get_raw_db_client
 from pipelineFramework.server.dto.dto import (
     StepDto,
 )
-from pipelineFramework.server.pipeline import Step
-from .authentication import verify_token
+from .authentication import require_all_entitlements
+from ..pipeline import Step
+
+AUTH_REQUIREMENTS_VIEW = require_all_entitlements("tech-atlas:read")
 
 
 def step_endpoints(app: FastAPI, api_base_url: str):
     @app.get(api_base_url + "/pipelines/{pipeline_id}/steps")
-    async def get_pipeline_steps(pipeline_id: str) -> List[StepDto]:
+    async def get_pipeline_steps(pipeline_id: str, _=Depends(AUTH_REQUIREMENTS_VIEW)) -> List[StepDto]:
         pipeline_db = get_pipeline_db_client()
         steps = pipeline_db.get_collection("steps").find({"pipeline": ObjectId(pipeline_id)})
         if steps is None:
@@ -23,7 +26,7 @@ def step_endpoints(app: FastAPI, api_base_url: str):
         return [StepDto.from_entity(step) for step in steps]
 
     @app.get(api_base_url + "/pipelines/{pipeline_id}/steps/{step_id}/result")
-    async def get_pipeline_steps_result(pipeline_id: str, step_id: str) -> Response:
+    async def get_pipeline_steps_result(pipeline_id: str, step_id: str, _=Depends(AUTH_REQUIREMENTS_VIEW)) -> Response:
         pipeline_db = get_pipeline_db_client()
         step = pipeline_db.get_collection("steps").find_one(
             {"_id": ObjectId(step_id), "pipeline": ObjectId(pipeline_id)}
