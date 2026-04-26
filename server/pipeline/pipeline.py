@@ -84,6 +84,9 @@ class Pipeline:
             return PipelineState.OPEN
         return PipelineState.FINISHED
 
+    def __str__(self):
+        return f"{self.name} ({str(self.id)})"
+
     @property
     def type(self) -> str:
         return self.config.type
