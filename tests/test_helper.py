@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Callable
 
-from pipelineFramework import PipelineServer, PipelineState
+from pipelineFramework import PipelineServer, PipelineState, StepConfig, UserStepConfig
 
 
 async def check_running(pipeline_server: PipelineServer, timeout: float):
@@ -24,3 +24,7 @@ def execute_test(
     task = event_loop.create_task(check_running(pipeline_server, timeout), name="Test Checker")
     event_loop.run_until_complete(task)
     test_check(pipeline_server)
+
+
+def get_default_user_config(step: StepConfig) -> UserStepConfig:
+    return {config.name: config.defaultValue for config in step.user_config()}

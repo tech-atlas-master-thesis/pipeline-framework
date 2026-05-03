@@ -104,7 +104,7 @@ class Step:
 
         if isinstance(result, pd.DataFrame) or isinstance(result, pd.Series):
             preview_data = result.to_string(max_cols=5, max_rows=25)
-            data = result.to_csv()
+            data = result.to_csv(index=False)
             preview = True
             result_type = StepResultType.CSV
 
