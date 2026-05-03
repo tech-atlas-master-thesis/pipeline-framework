@@ -1,5 +1,6 @@
 import datetime
 import json
+import pprint
 from typing import List, Self, Optional, Any
 
 import gridfs
@@ -11,6 +12,12 @@ from .lock import pipelineMutex
 from ..dto.dto import StepDto, StepResultDto, StepResultType, Event
 from ..config import StepConfig, UserStepConfig, PipelineState, EventType, PipelineDummy
 from ..db import get_raw_db_client
+
+
+def custom_json_encoder(obj):
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    raise TypeError(f"{repr(obj)} of type {type(obj)} is not JSON serializable")
 
 
 class Step:
@@ -103,16 +110,24 @@ class Step:
         preview_data = None
 
         if isinstance(result, pd.DataFrame) or isinstance(result, pd.Series):
-            preview_data = result.to_string(max_cols=5, max_rows=25)
+            preview_data = result.to_string(max_cols=5, max_rows=25)[:1000]
             data = result.to_csv(index=False)
             preview = True
             result_type = StepResultType.CSV
 
         elif isinstance(result, dict):
-            preview_data = json.dumps(dict.fromkeys(result, "..."))
-            data = json.dumps(result)
-            preview = True
-            result_type = StepResultType.CSV
+            data = json.dumps(result, default=custom_json_encoder)
+            preview = len(data) > 1000
+            if preview:
+                preview_data = pprint.pformat(result, depth=1)
+            result_type = StepResultType.JSON
+
+        elif isinstance(result, list):
+            data = json.dumps(result, default=custom_json_encoder)
+            preview = len(data) > 1000
+            if preview:
+                preview_data = f"{len(result)} entries in total\nFirst three items:\n{pprint.pformat(result[:3])}"
+            result_type = StepResultType.JSON
 
         if preview:
             file_id = self._save_file(data)
@@ -125,7 +140,7 @@ class Step:
                         "type": result_type,
                         "preview": preview,
                         "file": str(file_id),
-                        "data": preview_data[:100] if file_id else str(result),
+                        "data": preview_data,
                     }
                 }
             },
