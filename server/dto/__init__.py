@@ -1,4 +1,6 @@
 from .dto import (
+    PaginatedListDto,
+    PageDto,
     Event,
     PipelineCreation,
     StepConfigDto,
