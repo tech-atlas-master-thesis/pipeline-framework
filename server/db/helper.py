@@ -8,6 +8,24 @@ from pymongo import MongoClient
 
 
 @dataclass
+class Lookup:
+    from_field: str
+    local_field: str
+    foreign_field: str
+    as_field: str
+
+    def serialize(self):
+        return {
+            "$lookup": {
+                "from": self.from_field,
+                "localField": self.local_field,
+                "foreignField": self.foreign_field,
+                "as": self.as_field,
+            }
+        }
+
+
+@dataclass
 class DatabaseLogin:
     database_name: str
     username: str
