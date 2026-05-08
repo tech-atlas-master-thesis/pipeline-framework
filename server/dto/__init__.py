@@ -12,3 +12,10 @@ from .dto import (
     AuditInfoDto,
     UserDto,
 )
+from .config import (
+    ConfigurationDto,
+    ConfigurationVersionDto,
+    CreateConfigurationDto,
+    ConfigurationState,
+    ConfigurationDefinitionDto,
+)

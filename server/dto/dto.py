@@ -4,6 +4,7 @@ from enum import Enum
 from typing import List, Optional, Any, Dict, Callable, Generic, TypeVar
 
 from pydantic import BaseModel
+from .helper import get
 
 from ..config import (
     PipelineConfig,
@@ -14,16 +15,6 @@ from ..config import (
     PipelineState,
     EventType,
 )
-
-
-def _get(obj: Dict[str, Any], key: str, transformer: Optional[Callable[[Any], Any]] = None) -> Any:
-    if key not in obj:
-        return None
-    value = obj[key]
-    if transformer:
-        return transformer(value)
-    return value
-
 
 @dataclass
 class Event:
@@ -77,13 +68,13 @@ class PipelineDto:
     @classmethod
     def from_entity(cls, entity: Dict):
         return cls(
-            _get(entity, "_id", str),
-            _get(entity, "type"),
-            _get(entity, "name"),
-            _get(entity, "description"),
-            _get(entity, "state"),
-            _get(entity, "userConfig"),
-            _get(entity, "created"),
+            get(entity, "_id", str),
+            get(entity, "type"),
+            get(entity, "name"),
+            get(entity, "description"),
+            get(entity, "state"),
+            get(entity, "userConfig"),
+            get(entity, "created"),
         )
 
 
@@ -114,13 +105,13 @@ class StepDto:
     @classmethod
     def from_entity(cls, entity: Dict):
         return cls(
-            _get(entity, "_id", str),
-            _get(entity, "state"),
-            _get(entity, "name"),
-            _get(entity, "displayName"),
-            _get(entity, "description"),
-            _get(entity, "events"),
-            _get(entity, "result"),
+            get(entity, "_id", str),
+            get(entity, "state"),
+            get(entity, "name"),
+            get(entity, "displayName"),
+            get(entity, "description"),
+            get(entity, "events"),
+            get(entity, "result"),
         )
 
 
