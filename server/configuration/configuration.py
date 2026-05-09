@@ -7,24 +7,21 @@ from bson import ObjectId
 from ..dto import UserDto, AuditInfoDto, PaginatedListDto, PageDto
 from .config_definition import Configuration
 from ..db import get_pipeline_db_client
-from ..dto import ConfigurationDto, ConfigurationVersionDto, ConfigurationState, ConfigurationDefinitionDto
+from ..dto import (
+    ConfigurationDto,
+    ConfigurationVersionDto,
+    ConfigurationState,
+    ConfigurationDefinitionDto,
+    UpdateConfigurationDto,
+    UpdateConfigurationVersionDto,
+)
 
 
 class ConfigurationManager:
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __init__(self):
+    def __init__(self, config_definitions: List[Configuration]):
         self.config_db = get_pipeline_db_client().get_collection("configuration")
         self.version_db = get_pipeline_db_client().get_collection("configuration_version")
-        self.definitions: Dict[str, Configuration] = {}
-
-    def set_configuration_definition(self, definitions: List[Configuration]):
-        self.definitions = {d.type: d for d in definitions}
+        self.definitions = {d.type: d for d in config_definitions}
 
     def get_configuration_definition(self) -> List[ConfigurationDefinitionDto]:
         return [ConfigurationDefinitionDto(d.type, d.name, d.description) for d in self.definitions.values()]
@@ -62,7 +59,7 @@ class ConfigurationManager:
             None, type, name, description, AuditInfoDto(user, datetime.datetime.now(datetime.UTC)), None
         )
         new_id = self.config_db.insert_one(config.to_entity())
-        config.id = new_id.inserted_id
+        config.id = str(new_id.inserted_id)
         return config
 
     def get_configuration(self, collection_id: str) -> ConfigurationDto:
@@ -71,19 +68,19 @@ class ConfigurationManager:
             raise FileNotFoundError(f'Collection with id "{collection_id}" not found')
         return ConfigurationDto.from_entity(collection)
 
-    def update_configuration(self, config: ConfigurationDto, user: UserDto) -> ConfigurationDto:
+    def update_configuration(self, config_id: str, config: UpdateConfigurationDto, user: UserDto) -> ConfigurationDto:
         self.config_db.update_one(
-            {"_id": ObjectId(config.id)},
+            {"_id": ObjectId(config_id)},
             {
                 "$set": {
                     "name": config.name,
                     "description": config.description,
-                    "modified": AuditInfoDto(user, datetime.datetime.now(datetime.UTC)),
+                    "modified": AuditInfoDto(user, datetime.datetime.now(datetime.UTC)).serialize(),
                 }
             },
         )
 
-        return config
+        return self.get_configuration(config_id)
 
     def get_versions(
         self,
@@ -112,11 +109,11 @@ class ConfigurationManager:
         )
 
     def create_new_version(
-        self, collection: str, name: Optional[str], description: Optional[str], user: UserDto
+        self, collection_id: str, name: Optional[str], description: Optional[str], user: UserDto
     ) -> ConfigurationVersionDto:
         now = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
-        versions = self.version_db.count_documents({"collection": ObjectId(collection)})
-        collection = self.config_db.find_one({"_id": ObjectId(collection)})
+        versions = self.version_db.count_documents({"collection": ObjectId(collection_id)})
+        collection = self.config_db.find_one({"_id": ObjectId(collection_id)})
         if collection is None:
             raise FileNotFoundError(f'Collection with id "{collection}" not found')
         definition = self.definitions[collection["type"]]
@@ -124,7 +121,7 @@ class ConfigurationManager:
             raise FileNotFoundError(f'Definition for "{name}" not found')
         version = ConfigurationVersionDto(
             None,
-            collection,
+            collection_id,
             versions + 1,
             name,
             description,
@@ -134,12 +131,12 @@ class ConfigurationManager:
             None,
         )
         new_id = self.version_db.insert_one(version.to_entity())
-        version.id = new_id.inserted_id
+        version.id = str(new_id.inserted_id)
 
         return version
 
     def get_version(self, collection_id: str, version_id: str) -> ConfigurationVersionDto:
-        version = self.version_db.find_one({"_id": ObjectId(version_id), "collection": collection_id})
+        version = self.version_db.find_one({"_id": ObjectId(version_id), "collection": ObjectId(collection_id)})
         if version is None:
             raise FileNotFoundError(
                 f'Collection with id "{version_id}" from collection with ID "{collection_id}" not found'
@@ -147,27 +144,20 @@ class ConfigurationManager:
         return ConfigurationVersionDto.from_entity(version)
 
     def update_version(
-        self, collection: str, version: ConfigurationVersionDto, user: UserDto
+        self, config_id: str, version_id, version: UpdateConfigurationVersionDto, user: UserDto
     ) -> ConfigurationVersionDto:
         now = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
-        if collection != version.collection:
-            raise NameError(
-                f'Collection with id "{collection}" does not match versions collection with id "{version.collection}"'
-            )
-        collection = self.config_db.find_one({"_id": ObjectId(collection)})
-        if collection is None:
-            raise FileNotFoundError(f'Collection with id "{collection}" not found')
         self.version_db.update_one(
-            {"_id": ObjectId(version.id)},
+            {"_id": ObjectId(version_id), "collection": ObjectId(config_id)},
             {
                 "$set": {
                     "name": version.name,
                     "description": version.description,
                     "state": version.state,
-                    "configuraion": version.configuration,
-                    "modified": now,
+                    "configuration": version.configuration,
+                    "modified": now.serialize(),
                 }
             },
         )
 
-        return version
+        return self.get_version(config_id, version_id)

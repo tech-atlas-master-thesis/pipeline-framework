@@ -4,21 +4,23 @@ from fastapi import FastAPI, Query
 from fastapi.params import Depends
 
 from .authentication import require_all_entitlements
-from ..configuration import ConfigurationManager
+from ..configuration import ConfigurationManager, Configuration
 from ..dto import (
     ConfigurationDto,
     CreateConfigurationDto,
     ConfigurationVersionDto,
     PaginatedListDto,
     ConfigurationDefinitionDto,
+    UpdateConfigurationDto,
+    UpdateConfigurationVersionDto,
 )
 
 AUTH_REQUIREMENTS_VIEW = require_all_entitlements("tech-atlas:read")
 AUTH_REQUIREMENTS_EDIT = require_all_entitlements("tech-atlas:write")
 
 
-def configuration_endpoints(app: FastAPI, api_base_url: str):
-    config_manager = ConfigurationManager()
+def configuration_endpoints(app: FastAPI, config_definitions: List[Configuration], api_base_url: str):
+    config_manager = ConfigurationManager(config_definitions)
 
     @app.get(api_base_url + "/configuration-types")
     async def get_configuration_types() -> List[ConfigurationDefinitionDto]:
@@ -47,11 +49,11 @@ def configuration_endpoints(app: FastAPI, api_base_url: str):
 
     @app.post(api_base_url + "/configuration/{configuration_id}")
     async def update_configuration(
-        configuration: ConfigurationDto, user=Depends(AUTH_REQUIREMENTS_EDIT)
+        configuration_id: str, configuration: UpdateConfigurationDto, user=Depends(AUTH_REQUIREMENTS_EDIT)
     ) -> ConfigurationDto:
-        return config_manager.update_configuration(configuration, user)
+        return config_manager.update_configuration(configuration_id, configuration, user)
 
-    @app.get(api_base_url + "/configuration/{configuration_id}/version}")
+    @app.get(api_base_url + "/configuration/{configuration_id}/version")
     def get_version(
         configuration_id: str,
         state: Annotated[Optional[List[str]], Query()] = None,
@@ -63,7 +65,7 @@ def configuration_endpoints(app: FastAPI, api_base_url: str):
     ) -> PaginatedListDto[ConfigurationVersionDto]:
         return config_manager.get_versions(configuration_id, state, name, sort, limit, offset)
 
-    @app.post(api_base_url + "/configuration/{configuration_id}/verison")
+    @app.post(api_base_url + "/configuration/{configuration_id}/version")
     async def create_version(
         body: CreateConfigurationDto, user=Depends(AUTH_REQUIREMENTS_EDIT)
     ) -> ConfigurationVersionDto:
@@ -77,6 +79,6 @@ def configuration_endpoints(app: FastAPI, api_base_url: str):
 
     @app.post(api_base_url + "/configuration/{configuration_id}/version/{version_id}")
     def update_version(
-        configuration_id: str, version: ConfigurationVersionDto, user=Depends(AUTH_REQUIREMENTS_EDIT)
+        configuration_id: str, version_id, version: UpdateConfigurationVersionDto, user=Depends(AUTH_REQUIREMENTS_EDIT)
     ) -> ConfigurationVersionDto:
-        return config_manager.update_version(configuration_id, version, user)
+        return config_manager.update_version(configuration_id, version_id, version, user)

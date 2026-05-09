@@ -19,7 +19,7 @@ class ConfigurationState(str, Enum):
 class ConfigurationDefinitionDto:
     type: str
     name: LocalisationStringType
-    description: Optional[LocalisationStringType]
+    description: Optional[LocalisationStringType] = None
 
 
 @dataclass
@@ -88,8 +88,8 @@ class ConfigurationVersionDto:
             "description": self.description,
             "state": self.state,
             "configuration": self.configuration,
-            "created": self.created,
-            "modified": self.modified,
+            "created": self.created.serialize(),
+            "modified": self.modified.serialize() if self.modified else None,
         }
 
 
@@ -98,3 +98,17 @@ class CreateConfigurationDto:
     type: str
     name: Optional[str]
     description: Optional[str]
+
+
+@dataclass
+class UpdateConfigurationDto:
+    name: Optional[str]
+    description: Optional[str]
+
+
+@dataclass
+class UpdateConfigurationVersionDto:
+    name: Optional[str]
+    description: Optional[str]
+    state: ConfigurationState
+    configuration: Any

@@ -18,4 +18,6 @@ from .config import (
     CreateConfigurationDto,
     ConfigurationState,
     ConfigurationDefinitionDto,
+    UpdateConfigurationDto,
+    UpdateConfigurationVersionDto,
 )

@@ -4,3 +4,4 @@ from .config import *
 from .pipeline import *
 from .server import PipelineServer
 from .db import *
+from .configuration import *

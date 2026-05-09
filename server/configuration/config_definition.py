@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
-
+from typing import Any, Optional
 
 from ..config import LocalisationStringType
 
@@ -9,5 +8,5 @@ from ..config import LocalisationStringType
 class Configuration:
     type: str
     name: LocalisationStringType
-    description: LocalisationStringType
     default_config: Any
+    description: Optional[LocalisationStringType] = None
