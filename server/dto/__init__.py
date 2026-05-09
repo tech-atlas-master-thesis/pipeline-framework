@@ -21,3 +21,4 @@ from .config import (
     UpdateConfigurationDto,
     UpdateConfigurationVersionDto,
 )
+from .serialisation import custom_json_encoder

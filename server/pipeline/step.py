@@ -9,15 +9,9 @@ from bson import ObjectId
 from pymongo.synchronous.database import Database
 
 from .lock import pipelineMutex
-from ..dto.dto import StepDto, StepResultDto, StepResultType, Event
+from ..dto import StepDto, StepResultDto, StepResultType, Event, custom_json_encoder
 from ..config import StepConfig, UserStepConfig, PipelineState, EventType, PipelineDummy
 from ..db import get_raw_db_client
-
-
-def custom_json_encoder(obj):
-    if isinstance(obj, ObjectId):
-        return str(obj)
-    raise TypeError(f"{repr(obj)} of type {type(obj)} is not JSON serializable")
 
 
 class Step:
