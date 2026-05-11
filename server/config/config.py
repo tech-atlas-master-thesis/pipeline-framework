@@ -43,6 +43,7 @@ class StepUserConfig:
         DATE = "DATE"
         PIPELINE = "PIPELINE"
         STEP = "STEP"
+        CONFIGURATION = "CONFIGURATION"
 
     name: str
     displayName: LocalisationStringType
@@ -51,6 +52,7 @@ class StepUserConfig:
     defaultValue: Optional[UserConfigValue] = None
     enumValues: Optional[List[UserConfigEnumDto]] = None
     pipelineType: Optional[str] = None
+    configurationType: Optional[str] = None
 
 
 class StepConfig(metaclass=ABCMeta):

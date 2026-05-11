@@ -1,1 +1,2 @@
 from .get_results_from_latest_pipeline import GetResultFromLatestPipeline
+from .dummy_step_factory import get_dummy_step

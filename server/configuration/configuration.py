@@ -108,6 +108,14 @@ class ConfigurationManager:
             PageDto(offset, limit, total_records),
         )
 
+    def get_latest_version(
+        self, configuration_id: str, state: Optional[str] = ConfigurationState.ACTIVE
+    ) -> ConfigurationVersionDto:
+        query: Dict = {"collection": ObjectId(configuration_id), "state": {"$in": state}}
+        sort_query = {"version": -1}
+        version = self.version_db.find_one(query).sort(sort_query)
+        return ConfigurationVersionDto.from_entity(version)
+
     def create_new_version(
         self, collection_id: str, name: Optional[str], description: Optional[str], user: UserDto
     ) -> ConfigurationVersionDto:
