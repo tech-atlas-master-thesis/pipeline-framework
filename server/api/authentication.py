@@ -1,16 +1,19 @@
+import os
 from functools import lru_cache
 from typing import Any
 
 import jwt
 import requests
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from ..dto.dto import UserDto
 
-AUTHENTIK_ISSUER = "https://auth.mooslechner.dev/application/o/tech-atlas/"
-AUTHENTIK_AUDIENCE = "NjrD7i3pcLYKUPRlzdCpqLJGlbUwCq2DPY9ceeIh"
-JWKS_URL = f"{AUTHENTIK_ISSUER}jwks/"
+load_dotenv()
+OAUTH_ISSUER = os.environ.get("OAUTH_ISSUER")
+OAUTH_AUDIENCE = os.environ.get("OAUTH_AUDIENCE")
+JWKS_URL = f"{OAUTH_ISSUER}/jwks"
 
 
 bearer_scheme = HTTPBearer()
@@ -58,8 +61,8 @@ def verify_token(token: str):
             token,
             signing_key.key,
             algorithms=["RS256"],
-            issuer=AUTHENTIK_ISSUER,
-            audience=AUTHENTIK_AUDIENCE,
+            issuer=OAUTH_ISSUER,
+            audience=OAUTH_AUDIENCE,
         )
 
         return payload
