@@ -13,7 +13,8 @@ from ..dto.dto import UserDto
 load_dotenv()
 OAUTH_ISSUER = os.environ.get("OAUTH_ISSUER")
 OAUTH_AUDIENCE = os.environ.get("OAUTH_AUDIENCE")
-JWKS_URL = f"{OAUTH_ISSUER}/jwks"
+OAUTH_JWKS = os.environ.get("OAUTH_JWKS")
+JWKS_URL = f"{OAUTH_ISSUER}/{OAUTH_JWKS}"
 
 
 bearer_scheme = HTTPBearer()
