@@ -6,7 +6,7 @@ from typing import List, Union, Optional, Dict, Any
 
 from .status import PipelineState
 
-UserConfigValue = Union[str, int, float, Dict[str, str], List[str], datetime.datetime]
+UserConfigValue = Optional[Union[str, int, float, Dict[str, str], List[str], datetime.datetime]]
 
 UserStepConfig = Dict[str, UserConfigValue]
 UserConfig = Dict[str, UserStepConfig]
@@ -50,9 +50,11 @@ class StepUserConfig:
     description: Optional[LocalisationStringType]
     type: StepUserConfigType
     defaultValue: Optional[UserConfigValue] = None
+    required: bool = True
     enumValues: Optional[List[UserConfigEnumDto]] = None
     pipelineType: Optional[str] = None
     configurationType: Optional[str] = None
+    format: Optional[str] = None
 
 
 class StepConfig(metaclass=ABCMeta):
