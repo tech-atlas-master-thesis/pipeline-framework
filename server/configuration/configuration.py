@@ -3,6 +3,7 @@ import re
 from typing import List, Dict, Optional
 
 from bson import ObjectId
+from fastapi import HTTPException
 
 from ..dto import UserDto, AuditInfoDto, PaginatedListDto, PageDto
 from .config_definition import Configuration
@@ -117,16 +118,24 @@ class ConfigurationManager:
         return ConfigurationVersionDto.from_entity(version)
 
     def create_new_version(
-        self, collection_id: str, name: Optional[str], description: Optional[str], user: UserDto
+        self,
+        collection_id: str,
+        name: Optional[str],
+        description: Optional[str],
+        base_version_id: Optional[str],
+        user: UserDto,
     ) -> ConfigurationVersionDto:
         now = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
+        base_version = self.version_db.find_one({"_id": ObjectId(base_version_id)}) if base_version_id else None
+        if base_version_id and not base_version:
+            raise HTTPException(status_code=404, detail="Base version not found")
         versions = self.version_db.count_documents({"collection": ObjectId(collection_id)})
         collection = self.config_db.find_one({"_id": ObjectId(collection_id)})
         if collection is None:
-            raise FileNotFoundError(f'Collection with id "{collection}" not found')
+            raise HTTPException(status_code=404, detail=f'Collection with id "{collection}" not found')
         definition = self.definitions[collection["type"]]
         if definition is None:
-            raise FileNotFoundError(f'Definition for "{name}" not found')
+            raise HTTPException(status_code=404, detail=f'Definition for "{name}" not found')
         version = ConfigurationVersionDto(
             None,
             collection_id,
@@ -134,7 +143,7 @@ class ConfigurationManager:
             name,
             description,
             ConfigurationState.DRAFT,
-            definition.default_config,
+            base_version["configuration"] if base_version else definition.default_config,
             now,
             None,
         )

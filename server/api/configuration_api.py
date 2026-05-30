@@ -69,7 +69,7 @@ def configuration_endpoints(app: FastAPI, config_definitions: List[Configuration
     async def create_version(
         body: CreateConfigurationDto, user=Depends(AUTH_REQUIREMENTS_EDIT)
     ) -> ConfigurationVersionDto:
-        return config_manager.create_new_version(body.type, body.name, body.description, user)
+        return config_manager.create_new_version(body.type, body.name, body.description, body.baseVersionId, user)
 
     @app.get(api_base_url + "/configuration/{configuration_id}/version/{version_id}")
     def get_version(

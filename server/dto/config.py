@@ -98,6 +98,7 @@ class CreateConfigurationDto:
     type: str
     name: Optional[str]
     description: Optional[str]
+    baseVersionId: Optional[str]
 
 
 @dataclass
