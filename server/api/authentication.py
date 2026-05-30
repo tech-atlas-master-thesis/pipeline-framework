@@ -15,6 +15,7 @@ OAUTH_ISSUER = os.environ.get("OAUTH_ISSUER")
 OAUTH_AUDIENCE = os.environ.get("OAUTH_AUDIENCE")
 OAUTH_JWKS = os.environ.get("OAUTH_JWKS")
 JWKS_URL = f"{OAUTH_ISSUER}{OAUTH_JWKS}"
+AUTH_DISABLED = os.environ.get("AUTH_DISABLED")
 
 
 bearer_scheme = HTTPBearer()
@@ -76,10 +77,22 @@ def verify_token(token: str):
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> AuthUser:
+    if AUTH_DISABLED:
+        return AuthUser(
+            {
+                "sub": "test_user",
+                "preferred_username": "Testian Userson",
+                "email": "test.user@test.com",
+            }
+        )
+
     return AuthUser(verify_token(credentials.credentials))
 
 
 def require_any_entitlements(*required_entitlements):
+    if AUTH_DISABLED:
+        return lambda: True
+
     def checker(user=Depends(get_current_user)):
         entitlements = set(user.token.get("entitlements", []))
 
@@ -92,6 +105,9 @@ def require_any_entitlements(*required_entitlements):
 
 
 def require_all_entitlements(*required_entitlements):
+    if AUTH_DISABLED:
+        return lambda: True
+
     def checker(user=Depends(get_current_user)):
         entitlements = set(user.token.get("entitlements", []))
 
