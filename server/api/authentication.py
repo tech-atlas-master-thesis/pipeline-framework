@@ -32,6 +32,15 @@ class AuthUser:
         return UserDto(self.id, self.name, self.email)
 
 
+FALLBACK_DEBUG_USER = AuthUser(
+    {
+        "sub": "test_user",
+        "preferred_username": "Testian Userson",
+        "email": "test.user@test.com",
+    }
+)
+
+
 @lru_cache(maxsize=1)
 def get_jwks():
     response = requests.get(JWKS_URL, timeout=10)
@@ -77,21 +86,15 @@ def verify_token(token: str):
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> AuthUser:
-    if AUTH_DISABLED:
-        return AuthUser(
-            {
-                "sub": "test_user",
-                "preferred_username": "Testian Userson",
-                "email": "test.user@test.com",
-            }
-        )
+    if AUTH_DISABLED == "disabled":
+        return FALLBACK_DEBUG_USER
 
     return AuthUser(verify_token(credentials.credentials))
 
 
 def require_any_entitlements(*required_entitlements):
-    if AUTH_DISABLED:
-        return lambda: True
+    if AUTH_DISABLED == "disabled":
+        return lambda: FALLBACK_DEBUG_USER.serialize()
 
     def checker(user=Depends(get_current_user)):
         entitlements = set(user.token.get("entitlements", []))
@@ -105,8 +108,8 @@ def require_any_entitlements(*required_entitlements):
 
 
 def require_all_entitlements(*required_entitlements):
-    if AUTH_DISABLED:
-        return lambda: True
+    if AUTH_DISABLED == "disabled":
+        return lambda: FALLBACK_DEBUG_USER.serialize()
 
     def checker(user=Depends(get_current_user)):
         entitlements = set(user.token.get("entitlements", []))
