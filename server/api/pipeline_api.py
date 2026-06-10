@@ -5,20 +5,22 @@ from bson import ObjectId
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.params import Depends
 
-from pipelineFramework.server.config import PipelineConfig
-from pipelineFramework.server.db import get_pipeline_db_client
-from pipelineFramework.server.dto.dto import PipelineDto, PipelineCreation, PaginatedListDto, PageDto
-from pipelineFramework.server.server import PipelineServer
+from ..dto import (
+    PipelineDto,
+    PipelineCreation,
+    PaginatedListDto,
+    PageDto,
+)
+from ..server import PipelineServer
+from ..db import get_pipeline_db_client
 from .authentication import require_all_entitlements
 
 AUTH_REQUIREMENTS_VIEW = require_all_entitlements("tech-atlas:read")
 AUTH_REQUIREMENTS_EDIT = require_all_entitlements("tech-atlas:write")
 
 
-def pipeline_endpoints(
-    app: FastAPI, pipeline_server: PipelineServer, pipeline_config: List[PipelineConfig], api_base_url: str
-):
-    available_pipelines = {pipeline.type: pipeline for pipeline in pipeline_config}
+def pipeline_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_base_url: str):
+    available_pipelines = {pipeline.type: pipeline for pipeline in pipeline_server.pipeline_configs}
 
     @app.get(api_base_url + "/pipelines")
     async def get_pipelines(

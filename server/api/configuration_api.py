@@ -4,7 +4,8 @@ from fastapi import FastAPI, Query
 from fastapi.params import Depends
 
 from .authentication import require_all_entitlements
-from ..configuration import ConfigurationManager, Configuration
+from ..configuration import ConfigurationManager
+from ..server import PipelineServer
 from ..dto import (
     ConfigurationDto,
     CreateConfigurationDto,
@@ -19,8 +20,8 @@ AUTH_REQUIREMENTS_VIEW = require_all_entitlements("tech-atlas:read")
 AUTH_REQUIREMENTS_EDIT = require_all_entitlements("tech-atlas:write")
 
 
-def configuration_endpoints(app: FastAPI, config_definitions: List[Configuration], api_base_url: str):
-    config_manager = ConfigurationManager(config_definitions)
+def configuration_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_base_url: str):
+    config_manager = ConfigurationManager(pipeline_server.config_definitions)
 
     @app.get(api_base_url + "/configuration-types")
     async def get_configuration_types() -> List[ConfigurationDefinitionDto]:

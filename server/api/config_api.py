@@ -4,14 +4,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.params import Depends
 
 from ..api.authentication import require_all_entitlements
-from ..config import PipelineConfig
+from ..server import PipelineServer
 from ..dto.dto import PipelineConfigDto, StepConfigDto
 
 AUTH_REQUIREMENTS_VIEW = require_all_entitlements("tech-atlas:read")
 
 
-def config_enpoints(app: FastAPI, pipeline_config: List[PipelineConfig], api_base_url: str):
-    available_pipelines = {pipeline.type: pipeline for pipeline in pipeline_config}
+def config_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_base_url: str):
+    available_pipelines = {pipeline.type: pipeline for pipeline in pipeline_server.pipeline_configs}
 
     @app.get(api_base_url + "/config/pipeline-types")
     async def get_pipeline_types(_=Depends(AUTH_REQUIREMENTS_VIEW)) -> List[PipelineConfigDto]:

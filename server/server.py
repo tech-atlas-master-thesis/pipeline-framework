@@ -9,6 +9,8 @@ from .dto import PipelineCreation
 from .dto.dto import UserDto
 from .pipeline import Pipeline, Step
 from .pipeline.lock import pipelineMutex
+from .schedules.pipeline_scheduler import PipelineScheduler
+from .configuration import Configuration
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +18,13 @@ logger = logging.getLogger(__name__)
 class PipelineServer:
     running_tasks: List[asyncio.Task] = []
 
-    def __init__(self):
+    def __init__(self, pipeline_configs: List[PipelineConfig], config_definitions: List[Configuration]):
         self.pipelines: List[Pipeline] = []
         self.pipeline_db_client = get_pipeline_db_client()
         self.raw_db_client = get_raw_db_client()
+        self.pipeline_configs = pipeline_configs
+        self.config_definitions = config_definitions
+        self.scheduler = PipelineScheduler(self)
 
     def add_pipeline(
         self, pipeline_config: PipelineConfig, pipeline_creation: PipelineCreation, user: UserDto
