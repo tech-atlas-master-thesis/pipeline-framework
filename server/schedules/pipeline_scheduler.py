@@ -15,10 +15,10 @@ from ..pipeline import Pipeline
 
 
 class _PipelineServer:
-    pipeline_config: List[PipelineConfig]
+    pipeline_configs: List[PipelineConfig]
 
     def add_pipeline(
-        self, pipeline_config: PipelineConfig, pipeline_creation: PipelineCreation, user: UserDto
+        self, pipeline_configs: PipelineConfig, pipeline_creation: PipelineCreation, user: UserDto
     ) -> Pipeline:
         pass
 
@@ -31,7 +31,7 @@ class PipelineScheduler:
         self.scheduler = Scheduler()
         self._restart_saved_schedules(self.scheduler)
         self.scheduler.start_in_background()
-        self.available_pipelines = {pipeline.type: pipeline for pipeline in self.pipeline_server.pipeline_config}
+        self.available_pipelines = {pipeline.type: pipeline for pipeline in self.pipeline_server.pipeline_configs}
 
     def _restart_saved_schedules(self, scheduler: Scheduler):
         for schedule_entity in self.db_client.find():
