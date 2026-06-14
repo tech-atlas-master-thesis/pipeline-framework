@@ -24,9 +24,8 @@ class _PipelineServer:
 
 
 class PipelineScheduler:
-    db_client = get_pipeline_db_client().get_collection("schedules")
-
     def __init__(self, pipeline_server: _PipelineServer):
+        self.db_client = get_pipeline_db_client().get_collection("schedules")
         self.pipeline_server = pipeline_server
         self.scheduler = Scheduler()
         self._restart_saved_schedules(self.scheduler)

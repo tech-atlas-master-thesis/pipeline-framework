@@ -1,9 +1,6 @@
-from typing import List
-
 from fastapi import FastAPI
 
-from ..server import PipelineConfig, PipelineServer
-from ..configuration import Configuration
+from ..server import PipelineServer
 from . import pipeline_api, step_api, config_api, configuration_api
 
 
