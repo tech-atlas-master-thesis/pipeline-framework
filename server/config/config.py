@@ -6,7 +6,7 @@ from typing import List, Union, Optional, Dict, Any
 
 from .status import PipelineState
 
-UserConfigValue = Optional[Union[str, int, float, Dict[str, str], List[str], datetime.datetime]]
+UserConfigValue = Optional[Union[str, int, float, bool, Dict[str, str], List[str], datetime.datetime]]
 
 UserStepConfig = Dict[str, UserConfigValue]
 UserConfig = Dict[str, UserStepConfig]
@@ -38,6 +38,7 @@ class StepUserConfig:
         INTEGER = "INTEGER"
         FLOAT = "FLOAT"
         LIST = "LIST"
+        BOOLEAN = "BOOLEAN"
         MAPPING = "MAPPING"
         ENUM = "ENUM"
         DATE = "DATE"
