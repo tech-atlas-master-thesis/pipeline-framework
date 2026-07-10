@@ -114,7 +114,7 @@ class ConfigurationManager:
         if state:
             query["state"] = {"$in": state}
         sort_query = {"version": -1}
-        version = self.version_db.find_one(query).sort(sort_query)
+        version = self.version_db.find_one(query, sort=sort_query)
         return ConfigurationVersionDto.from_entity(version)
 
     def create_new_version(

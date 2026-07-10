@@ -28,7 +28,7 @@ LocalisationStringType = LocalisationString | str
 class UserConfigEnumDto:
     name: str
     displayName: LocalisationStringType
-    description: LocalisationStringType
+    description: Optional[LocalisationStringType] = None
 
 
 @dataclass
