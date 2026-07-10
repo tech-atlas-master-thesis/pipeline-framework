@@ -69,14 +69,17 @@ class StepConfig(metaclass=ABCMeta):
         yield
         raise NotImplementedError
 
+    @staticmethod
     @abstractmethod
-    def name(self) -> LocalisationStringType:
+    def name() -> LocalisationStringType:
         raise NotImplemented("Name not implemented")
 
+    @staticmethod
     @abstractmethod
-    def display_name(self) -> LocalisationStringType:
+    def display_name() -> LocalisationStringType:
         raise NotImplemented("Name not implemented")
 
+    @staticmethod
     def description(self) -> Optional[LocalisationStringType]:
         return None
 
