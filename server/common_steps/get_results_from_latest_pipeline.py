@@ -11,6 +11,31 @@ from ..db import get_pipeline_db_client, get_raw_db_client
 from ..db.helper import get_file_from_db
 
 
+async def get_pipeline_results(pipeline_name: str, step_name: str) -> Optional[Any]:
+    pipeline_db = get_pipeline_db_client()
+    pipeline = [*pipeline_db.get_collection("pipelines").find({"name": pipeline_name}).sort("_id", -1).limit(1)]
+    if not pipeline:
+        raise FileNotFoundError(f'No pipeline with name "{pipeline_name}" not found')
+    step = pipeline_db.get_collection("steps").find_one({"name": step_name, "pipeline": pipeline[0]["_id"]})
+    if not step:
+        raise FileNotFoundError(f'No pipeline step with name "{step_name}" for pipeline "{pipeline_name} found')
+    result = step["result"]
+    if not result:
+        raise FileNotFoundError(f'Pipeline step "{step_name}" for pipeline "{pipeline_name}" has no result')
+    if not result["preview"]:
+        return result["data"]
+    if not result["file"]:
+        raise FileNotFoundError("No file id found")
+    file_data = get_file_from_db(ObjectId(result["file"]))
+    match (result["type"]):
+        case StepResultType.CSV:
+            return pd.read_csv(file_data)
+        case StepResultType.JSON:
+            return json.load(file_data)
+        case _:
+            return file_data
+
+
 class GetResultFromLatestPipeline(StepConfig):
     def __init__(
         self,
@@ -32,36 +57,12 @@ class GetResultFromLatestPipeline(StepConfig):
         PIPELINE_NAME = user_config.get("PIPELINE_NAME")
         PIPELINE_STEP = user_config.get("PIPELINE_STEP")
 
-        pipeline_results = await self._get_pipeline_results(PIPELINE_NAME, PIPELINE_STEP)
+        pipeline_results = await get_pipeline_results(PIPELINE_NAME, PIPELINE_STEP)
         if pipeline_results is None:
             raise FileNotFoundError(
                 f'No result returned for step "{PIPELINE_STEP}" in pipeline "{PIPELINE_NAME}" found'
             )
         yield pipeline_results, EventType.RESULT
-
-    async def _get_pipeline_results(self, pipeline_name: str, step_name: str) -> Optional[Any]:
-        pipeline_db = get_pipeline_db_client()
-        pipeline = [*pipeline_db.get_collection("pipelines").find({"name": pipeline_name}).sort("_id", -1).limit(1)]
-        if not pipeline:
-            raise FileNotFoundError(f'No pipeline with name "{pipeline_name}" not found')
-        step = pipeline_db.get_collection("steps").find_one({"name": step_name, "pipeline": pipeline[0]["_id"]})
-        if not step:
-            raise FileNotFoundError(f'No pipeline step with name "{step_name}" for pipeline "{pipeline_name} found')
-        result = step["result"]
-        if not result:
-            raise FileNotFoundError(f'Pipeline step "{step_name}" for pipeline "{pipeline_name}" has no result')
-        if not result["preview"]:
-            return result["data"]
-        if not result["file"]:
-            raise FileNotFoundError("No file id found")
-        file_data = get_file_from_db(ObjectId(result["file"]))
-        match (result["type"]):
-            case StepResultType.CSV:
-                return pd.read_csv(file_data)
-            case StepResultType.JSON:
-                return json.load(file_data)
-            case _:
-                return file_data
 
     def user_config(self) -> List[StepUserConfig]:
         return [

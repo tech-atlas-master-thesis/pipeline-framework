@@ -110,21 +110,21 @@ class Step:
             result_type = StepResultType.CSV
 
         elif isinstance(result, dict):
-            data = json.dumps(result, default=custom_json_encoder)
+            data = json.dumps(result, default=custom_json_encoder, indent=2)
             preview = len(data) > 1000
             if preview:
-                preview_data = pprint.pformat(result, depth=1)
+                preview_data = f"{len(data)} entries in total\nFirst items: \n\n{pprint.pformat(dict([*result.items()][:10]), depth=2)}"
             result_type = StepResultType.JSON
 
         elif isinstance(result, list):
-            data = json.dumps(result, default=custom_json_encoder)
+            data = json.dumps(result, default=custom_json_encoder, indent=2)
             preview = len(data) > 1000
             if preview:
                 preview_data = f"{len(result)} entries in total\nFirst three items:\n{pprint.pformat(result[:3])}"
             result_type = StepResultType.JSON
 
         if preview:
-            file_id = self._save_file(data)
+            file_id = self._save_file(data, result_type)
 
         self.pipeline_db.update_one(
             {"_id": self.id},
@@ -143,13 +143,20 @@ class Step:
             result_type, preview, str(file_id) if file_id else None, preview_data if file_id else str(result)
         )
 
-    def _save_file(self, content: str) -> ObjectId:
+    def _save_file(self, content: str, file_type: StepResultType) -> ObjectId:
         file_db = gridfs.GridFS(get_raw_db_client())
         return file_db.put(
             content,
-            filename=f"{self.pipeline.name}-{self.pipeline.id}-{self.pipeline.name}-{self.name()}-{datetime.datetime.now().isoformat(timespec='seconds')}.csv",
+            filename=f"{self.pipeline.name}-{self.pipeline.id}-{self.pipeline.name}-{self.name()}-{datetime.datetime.now().isoformat(timespec='seconds')}.{self._get_file_extension(file_type)}",
             encoding="utf-8",
         )
+
+    def _get_file_extension(self, file_type: StepResultType) -> str:
+        if file_type == StepResultType.CSV:
+            return "csv"
+        if file_type == StepResultType.JSON:
+            return "json"
+        return "txt"
 
     def name(self) -> str:
         return self.step_config.name()
