@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from datetime import datetime, UTC
 from enum import Enum
 
 
@@ -14,3 +16,14 @@ class EventType(str, Enum):
     WARNING = "WARNING"
     DEBUG = "DEBUG"
     RESULT = "RESULT"
+
+
+@dataclass
+class Event:
+    timestamp: datetime
+    message: str
+    type: EventType
+
+    @classmethod
+    def now(cls, message: str, type: EventType):
+        return cls(datetime.now(UTC), message, type)

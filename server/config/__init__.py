@@ -10,4 +10,4 @@ from .config import (
     PipelineDummy,
     StepDummy,
 )
-from .status import PipelineState, EventType
+from .status import PipelineState, EventType, Event

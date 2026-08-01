@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Any, Dict, Callable, Generic, TypeVar
+from typing import List, Optional, Any, Dict, Generic, TypeVar
 
 from pydantic import BaseModel
-from .helper import get
 
+from .helper import get
 from ..config import (
     PipelineConfig,
     StepConfig,
@@ -13,14 +13,8 @@ from ..config import (
     LocalisationStringType,
     UserConfig,
     PipelineState,
-    EventType,
+    Event,
 )
-
-@dataclass
-class Event:
-    timestamp: datetime
-    message: str
-    type: EventType
 
 
 class PipelineCreation(BaseModel):

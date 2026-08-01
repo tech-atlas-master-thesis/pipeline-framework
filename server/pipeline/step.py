@@ -9,8 +9,8 @@ from bson import ObjectId
 from pymongo.synchronous.database import Database
 
 from .lock import pipelineMutex
-from ..dto import StepDto, StepResultDto, StepResultType, Event, custom_json_encoder
-from ..config import StepConfig, UserStepConfig, PipelineState, EventType, PipelineDummy
+from ..dto import StepDto, StepResultDto, StepResultType, custom_json_encoder
+from ..config import StepConfig, UserStepConfig, PipelineState, EventType, PipelineDummy, Event
 from ..db import get_raw_db_client
 
 
@@ -64,14 +64,21 @@ class Step:
     async def run(self):
         self._add_event(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
+            warnings = []
             async for event, event_type in self.step_config.run(
-                user_config=self.user_config, results=self.pipeline.results, pipeline=self.pipeline, step=self
+                user_config=self.user_config,
+                results=self.pipeline.results,
+                pipeline=self.pipeline,
+                step=self,
+                warnings=warnings,
             ):
                 if event_type == EventType.RESULT:
                     self.pipeline.results[self.name()] = event
                     self.result = self._save_result(event)
                 else:
                     self._add_event(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
+            for warning in warnings:
+                self._add_event(warning)
 
         except Exception as e:
             self._add_event(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))

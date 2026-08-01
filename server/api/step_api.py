@@ -6,10 +6,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.params import Depends
 from starlette.responses import Response
 
-from pipelineFramework.server.db import get_pipeline_db_client, get_raw_db_client
-from pipelineFramework.server.dto.dto import (
-    StepDto,
-)
+from ..db import get_pipeline_db_client, get_raw_db_client
+from ..dto import StepDto
 from .authentication import require_all_entitlements
 from ..pipeline import Step
 

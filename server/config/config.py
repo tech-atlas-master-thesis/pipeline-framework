@@ -1,12 +1,12 @@
-import datetime
 from abc import abstractmethod, ABCMeta
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import List, Union, Optional, Dict, Any
 
-from .status import PipelineState
+from .status import PipelineState, Event
 
-UserConfigValue = Optional[Union[str, int, float, bool, Dict[str, str], List[str], datetime.datetime]]
+UserConfigValue = Optional[Union[str, int, float, bool, Dict[str, str], List[str], datetime]]
 
 UserStepConfig = Dict[str, UserConfigValue]
 UserConfig = Dict[str, UserStepConfig]
@@ -66,6 +66,7 @@ class StepConfig(metaclass=ABCMeta):
         results: Optional[Dict[str, Any]] = None,
         pipeline: PipelineDummy = None,
         step: StepDummy = None,
+        warnings: Optional[List[Event]] = None,
     ):
         yield
         raise NotImplementedError

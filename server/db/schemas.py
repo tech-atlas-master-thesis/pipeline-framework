@@ -5,8 +5,8 @@ from typing import Optional, List
 
 from bson import ObjectId
 
-from ..config import PipelineState, UserConfig
-from ..dto import StepResultType, Event
+from ..config import PipelineState, UserConfig, Event
+from ..dto import StepResultType
 
 
 @dataclass
