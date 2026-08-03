@@ -55,6 +55,15 @@ def get_fe_db_client():
     )
 
 
+def get_cache_db_client():
+    return _get_pipeline_client(
+        os.environ.get("MONGO_URL"),
+        DatabaseLogin(
+            os.environ.get("DB_CACHE_NAME"), os.environ.get("DB_CACHE_USER"), os.environ.get("DB_CACHE_PASS")
+        ),
+    )
+
+
 def get_file_from_db(file_id: ObjectId):
     file_db = gridfs.GridFS(get_raw_db_client())
     file = file_db.get(file_id)
