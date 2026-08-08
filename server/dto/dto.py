@@ -30,11 +30,13 @@ class StepConfigDto:
     displayName: LocalisationStringType
     description: Optional[LocalisationStringType] = None
     userConfig: List[StepUserConfig] = field(default_factory=list)
+    dependencies: Optional[List[str]] = None
 
     def __init__(self, step: StepConfig):
         self.name = step.name()
         self.displayName = step.display_name()
         self.userConfig = step.user_config()
+        self.dependencies = step.dependencies()
 
 
 @dataclass
@@ -95,6 +97,7 @@ class StepDto:
     description: LocalisationStringType
     events: List[Event]
     result: StepResultDto
+    dependencies: List[str]
 
     @classmethod
     def from_entity(cls, entity: Dict):
@@ -106,6 +109,7 @@ class StepDto:
             get(entity, "description"),
             get(entity, "events"),
             get(entity, "result"),
+            get(entity, "dependencies"),
         )
 
 
