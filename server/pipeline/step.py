@@ -52,6 +52,7 @@ class Step:
                 "description": self.step_config.description().to_json() if self.step_config.description() else None,
                 "events": self.events,
                 "result": self.result,
+                "dependencies": self.step_config.dependencies(),
             }
         ).inserted_id
 
