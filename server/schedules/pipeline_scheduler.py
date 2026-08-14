@@ -11,6 +11,7 @@ from .pipeline_schedule import PipelineSchedule
 from ..config import PipelineConfig
 from ..db import get_pipeline_db_client
 from ..dto import PaginatedListDto, PageDto, PipelineCreation, UserDto, AuditInfoDto
+from ..dto.schedules import ScheduleCreation
 from ..pipeline import Pipeline
 
 
@@ -28,22 +29,37 @@ class PipelineScheduler:
         self.db_client = get_pipeline_db_client().get_collection("schedules")
         self.pipeline_server = pipeline_server
         self.scheduler = Scheduler()
-        self._restart_saved_schedules(self.scheduler)
+        self.current_jobs = {}
+        self._restart_saved_schedules()
         self.scheduler.start_in_background()
         self.available_pipelines = {pipeline.type: pipeline for pipeline in self.pipeline_server.pipeline_configs}
 
-    def _restart_saved_schedules(self, scheduler: Scheduler):
+    def _restart_saved_schedules(self):
         for schedule_entity in self.db_client.find():
             schedule = PipelineSchedule.from_entity(schedule_entity)
             if schedule.cron and schedule.active:
-                scheduler.add_schedule(lambda: self.run(schedule.id), CronTrigger.from_crontab(schedule.cron))
+                self.scheduler.add_schedule(
+                    self.run,
+                    CronTrigger.from_crontab(schedule.cron),
+                    id=schedule.id,
+                    args=[schedule.id],
+                )
 
-    def add_schedule(self, schedule: PipelineSchedule, user: UserDto) -> PipelineSchedule:
-        schedule.created = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
-        schedule_entity = self.db_client.insert_one(schedule.serialize())
-        if schedule.cron:
+    def add_schedule(self, schedule_creation: ScheduleCreation, user: UserDto) -> PipelineSchedule:
+        schedule = PipelineSchedule(
+            str(ObjectId()),
+            schedule_creation.to_pipeline(),
+            schedule_creation.active,
+            schedule_creation.cron,
+            AuditInfoDto(user, datetime.datetime.now(datetime.UTC)),
+        )
+        self.db_client.insert_one(schedule.to_entity())
+        if schedule.cron and schedule.active:
             self.scheduler.add_schedule(
-                lambda: self.run(schedule_entity["_id"]), CronTrigger.from_crontab(schedule.cron)
+                self.run,
+                CronTrigger.from_crontab(schedule.cron),
+                id=schedule.id,
+                args=[schedule.id],
             )
         return schedule
 
@@ -58,18 +74,18 @@ class PipelineScheduler:
     ) -> PaginatedListDto[PipelineSchedule]:
         query = {}
         if type:
-            query["type"] = {"$in": type}
+            query["pipeline.type"] = {"$in": type}
         if active is not None:
             query["active"] = {"$is": active}
         if name:
-            query["name"] = {"$regex": re.escape(name)}
+            query["pipeline.name"] = {"$regex": re.escape(name)}
         if sort:
             single_sorts = (single_sort.split(":") for single_sort in sort.split(";"))
             sort_query = {field: int(order) for field, order in single_sorts}
         else:
             sort_query = {"_id": -1}
-        schedules = self.db_client.get_collection("schedules").find(query).sort(sort_query).skip(offset).limit(limit)
-        total_records = self.db_client.get_collection("schedules").count_documents(query)
+        schedules = self.db_client.find(query).sort(sort_query).skip(offset).limit(limit)
+        total_records = self.db_client.count_documents(query)
         return PaginatedListDto(
             [PipelineSchedule.from_entity(schedule) for schedule in schedules], PageDto(offset, limit, total_records)
         )
@@ -78,16 +94,19 @@ class PipelineScheduler:
         schedule = self.db_client.find_one({"_id": ObjectId(schedule_id)})
         if not schedule:
             raise HTTPException(status_code=404, detail=f"Schedule with id {schedule_id} not found")
-        return schedule
+        return PipelineSchedule.from_entity(schedule)
 
-    def update_schedule(self, schedule_id: str, schedule: PipelineSchedule, user: UserDto) -> PipelineSchedule:
+    def update_schedule(self, schedule_id: str, schedule_update: ScheduleCreation, user: UserDto) -> PipelineSchedule:
         previous_schedule = self.get_schedule(schedule_id)
         if previous_schedule.cron and previous_schedule.active:
             self.scheduler.remove_schedule(previous_schedule.id)
+        schedule = self._update_schedule(previous_schedule, schedule_update)
         schedule.modified = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
-        self.db_client.replace_one({"_id": ObjectId(schedule_id)}, schedule.serialize())
+        self.db_client.replace_one({"_id": ObjectId(schedule_id)}, schedule.to_entity())
         if schedule.cron and schedule.active:
-            self.scheduler.add_schedule(lambda: self.run(schedule.id), CronTrigger.from_crontab(schedule.cron))
+            self.scheduler.add_schedule(
+                self.run, CronTrigger.from_crontab(schedule.cron), id=schedule.id, args=[schedule_id]
+            )
         return schedule
 
     def run(self, schedule_id: str, user: Optional[UserDto] = None) -> Pipeline:
@@ -95,14 +114,12 @@ class PipelineScheduler:
         if not schedule_entity:
             raise FileNotFoundError(f"Schedule with id {schedule_id} not found")
         schedule = PipelineSchedule.from_entity(schedule_entity)
-        pipeline_config = self.available_pipelines.get(schedule.type)
+        pipeline_config = self.available_pipelines.get(schedule.pipeline.type)
         if not pipeline_config:
-            raise FileNotFoundError(f"Schedule with type {schedule.type} not found")
+            raise FileNotFoundError(f"Schedule with type {schedule.pipeline.type} not found")
         pipeline = self.pipeline_server.add_pipeline(
             pipeline_config,
-            PipelineCreation(
-                type=schedule.type, name=schedule.name, description=schedule.description, config=schedule.config
-            ),
+            schedule.pipeline,
             user if user is not None else schedule.created.by,
         )
         self.db_client.update_one(
@@ -110,3 +127,15 @@ class PipelineScheduler:
             {"$set": {"last_pipeline": pipeline.id, "last_execution": pipeline.created.at}},
         )
         return pipeline
+
+    def _update_schedule(self, schedule: PipelineSchedule, schedule_creation: ScheduleCreation) -> PipelineSchedule:
+        return PipelineSchedule(
+            schedule.id,
+            schedule_creation.pipeline,
+            schedule_creation.active,
+            schedule_creation.cron,
+            schedule.created,
+            schedule.modified,
+            schedule.lastExecution,
+            schedule.lastPipeline,
+        )

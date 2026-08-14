@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from ..server import PipelineServer
-from . import pipeline_api, step_api, config_api, configuration_api
+from . import pipeline_api, step_api, config_api, configuration_api, schedule_api
 
 
 def add_common_api_calls(
@@ -17,3 +17,4 @@ def add_common_api_calls(
     pipeline_api.pipeline_endpoints(app, pipeline_server, api_base_url)
     step_api.step_endpoints(app, api_base_url)
     configuration_api.configuration_endpoints(app, pipeline_server, api_base_url)
+    schedule_api.schedule_endpoints(app, pipeline_server, api_base_url)

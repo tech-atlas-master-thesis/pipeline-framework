@@ -1,116 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
-from typing import List, Optional, Any, Dict, Generic, TypeVar
-
-from pydantic import BaseModel
-
-from .helper import get
-from ..config import (
-    PipelineConfig,
-    StepConfig,
-    StepUserConfig,
-    LocalisationStringType,
-    UserConfig,
-    PipelineState,
-    Event,
-)
-
-
-class PipelineCreation(BaseModel):
-    type: str
-    name: str
-    description: str
-    config: Optional[UserConfig] = None
-
-
-@dataclass
-class StepConfigDto:
-    name: str
-    displayName: LocalisationStringType
-    description: Optional[LocalisationStringType] = None
-    userConfig: List[StepUserConfig] = field(default_factory=list)
-    dependencies: Optional[List[str]] = None
-
-    def __init__(self, step: StepConfig):
-        self.name = step.name()
-        self.displayName = step.display_name()
-        self.userConfig = step.user_config()
-        self.dependencies = step.dependencies()
-
-
-@dataclass
-class PipelineConfigDto:
-    type: str
-    displayName: LocalisationStringType
-    description: LocalisationStringType
-
-    def __init__(self, pipeline: PipelineConfig):
-        self.type = pipeline.type
-        self.displayName = pipeline.display_name
-        self.description = pipeline.description
-
-
-@dataclass
-class PipelineDto:
-    id: str
-    type: str
-    name: str
-    description: str
-    state: PipelineState
-    userConfig: Optional[UserConfig]
-    created: AuditInfoDto
-
-    @classmethod
-    def from_entity(cls, entity: Dict):
-        return cls(
-            get(entity, "_id", str),
-            get(entity, "type"),
-            get(entity, "name"),
-            get(entity, "description"),
-            get(entity, "state"),
-            get(entity, "userConfig"),
-            get(entity, "created"),
-        )
-
-
-class StepResultType(str, Enum):
-    STRING = "STRING"
-    JSON = "JSON"
-    CSV = "CSV"
-
-
-@dataclass
-class StepResultDto:
-    type: StepResultType
-    preview: bool
-    file: str
-    data: Any
-
-
-@dataclass
-class StepDto:
-    id: str
-    state: PipelineState
-    name: str
-    displayName: LocalisationStringType
-    description: LocalisationStringType
-    events: List[Event]
-    result: StepResultDto
-    dependencies: List[str]
-
-    @classmethod
-    def from_entity(cls, entity: Dict):
-        return cls(
-            get(entity, "_id", str),
-            get(entity, "state"),
-            get(entity, "name"),
-            get(entity, "displayName"),
-            get(entity, "description"),
-            get(entity, "events"),
-            get(entity, "result"),
-            get(entity, "dependencies"),
-        )
+from typing import List, Optional, Generic, TypeVar, Dict
 
 
 @dataclass
@@ -140,6 +30,13 @@ class AuditInfoDto:
             "at": self.at,
         }
 
+    @classmethod
+    def from_entity(cls, entity: Dict) -> AuditInfoDto:
+        return cls(
+            by=UserDto.from_entity(entity["by"]),
+            at=entity["at"],
+        )
+
 
 @dataclass
 class UserDto:
@@ -153,3 +50,7 @@ class UserDto:
             "name": self.name,
             "email": self.email,
         }
+
+    @classmethod
+    def from_entity(cls, entity: Dict) -> UserDto:
+        return cls(id=entity["id"], name=entity["name"], email=entity["email"])

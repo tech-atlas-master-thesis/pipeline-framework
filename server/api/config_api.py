@@ -5,7 +5,7 @@ from fastapi.params import Depends
 
 from ..api.authentication import require_all_entitlements
 from ..server import PipelineServer
-from ..dto.dto import PipelineConfigDto, StepConfigDto
+from ..dto import PipelineConfigDto, StepConfigDto
 
 AUTH_REQUIREMENTS_VIEW = require_all_entitlements("tech-atlas:read")
 

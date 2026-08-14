@@ -1,16 +1,16 @@
 import asyncio
 import logging
 import traceback
-from typing import List, Optional
+from typing import List
 
 from .config import PipelineConfig, PipelineState
+from .configuration import Configuration
 from .db import get_pipeline_db_client, get_raw_db_client
 from .dto import PipelineCreation
 from .dto.dto import UserDto
 from .pipeline import Pipeline, Step
 from .pipeline.lock import pipelineMutex
 from .schedules.pipeline_scheduler import PipelineScheduler
-from .configuration import Configuration
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class PipelineServer:
     running_tasks: List[asyncio.Task] = []
 
     def __init__(self, pipeline_configs: List[PipelineConfig], config_definitions: List[Configuration]):
+        self.event_loop = asyncio.get_event_loop()
         self.pipelines: List[Pipeline] = []
         self.pipeline_db_client = get_pipeline_db_client()
         self.raw_db_client = get_raw_db_client()
@@ -38,7 +39,7 @@ class PipelineServer:
                     logger.debug(
                         f"Added pipeline step, '{pipeline_step.name()}' ({pipeline_step.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
                     )
-                    self.running_tasks.append(asyncio.create_task(self._execute_step(pipeline_step)))
+                    self.running_tasks.append(self.event_loop.create_task(self._execute_step(pipeline_step)))
         return pipeline
 
     async def _execute_step(self, step: Step):
@@ -76,4 +77,4 @@ class PipelineServer:
                     logger.debug(
                         f"Added pipeline step, '{dependent.name()}' ({dependent.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
                     )
-                    asyncio.create_task(self._execute_step(dependent))
+                    self.event_loop.create_task(self._execute_step(dependent))

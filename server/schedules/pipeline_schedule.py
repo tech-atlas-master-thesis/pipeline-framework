@@ -2,49 +2,56 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from ..config import UserConfig
-from ..dto import AuditInfoDto, PipelineDto
+from bson import ObjectId
+
+from ..dto import AuditInfoDto
+from ..dto.pipeline import PipelineCreation
 
 
 @dataclass
 class PipelineSchedule:
     id: str
-    type: str
-    name: str
-    description: str
+    pipeline: PipelineCreation
     active: bool
     cron: Optional[str]
-    config: Optional[UserConfig]
     created: AuditInfoDto
-    modified: AuditInfoDto
-    lastExecution: datetime
-    lastPipeline: str
+    modified: Optional[AuditInfoDto] = None
+    lastExecution: Optional[datetime] = None
+    lastPipeline: Optional[str] = None
 
     @classmethod
     def from_entity(cls, entity: Dict[str, Any]) -> "PipelineSchedule":
         return PipelineSchedule(
-            id=entity["_id"],
-            type=entity["type"],
-            name=entity["name"],
-            description=entity["description"],
+            id=str(entity["_id"]),
+            pipeline=PipelineCreation.model_validate(entity["pipeline"]),
             cron=entity["cron"],
-            config=entity["config"],
-            created=entity["created"],
-            modified=entity["modified"],
+            active=entity["active"],
+            created=AuditInfoDto.from_entity(entity["created"]),
+            modified=AuditInfoDto.from_entity(entity["modified"]) if entity["modified"] else None,
             lastExecution=entity["lastExecution"],
             lastPipeline=entity["lastPipeline"],
         )
 
+    def to_entity(self) -> Dict[str, Any]:
+        return {
+            "_id": ObjectId(self.id),
+            "pipeline": self.pipeline.model_dump(),
+            "cron": self.cron,
+            "active": self.active,
+            "created": self.created.serialize(),
+            "modified": self.modified.serialize() if self.modified else None,
+            "lastExecution": self.lastExecution,
+            "lastPipeline": self.lastPipeline,
+        }
+
     def serialize(self) -> Dict[str, Any]:
         return {
             "id": self.id,
-            "type": self.type,
-            "name": self.name,
-            "description": self.description,
+            "pipeline": self.pipeline.model_dump(),
             "cron": self.cron,
-            "config": self.config,
+            "active": self.active,
             "created": self.created.serialize(),
-            "modified": self.modified.serialize(),
+            "modified": self.modified.serialize() if self.modified else None,
             "lastExecution": self.lastExecution,
             "lastPipeline": self.lastPipeline,
         }
