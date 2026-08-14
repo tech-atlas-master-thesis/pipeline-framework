@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import traceback
-from typing import List
+from typing import List, Optional
 
 from .config import PipelineConfig, PipelineState
 from .configuration import Configuration
@@ -28,9 +28,13 @@ class PipelineServer:
         self.scheduler = PipelineScheduler(self)
 
     def add_pipeline(
-        self, pipeline_config: PipelineConfig, pipeline_creation: PipelineCreation, user: UserDto
+        self,
+        pipeline_config: PipelineConfig,
+        pipeline_creation: PipelineCreation,
+        user: UserDto,
+        schedule_id: Optional[str] = None,
     ) -> Pipeline:
-        pipeline = Pipeline(pipeline_config, pipeline_creation, self.pipeline_db_client, user)
+        pipeline = Pipeline(pipeline_config, pipeline_creation, self.pipeline_db_client, user, schedule_id=schedule_id)
         self.pipelines.append(pipeline)
         logger.info(f"Added pipeline '{pipeline.name}'")
         with pipelineMutex:

@@ -40,6 +40,7 @@ class PipelineDto:
     state: PipelineState
     userConfig: Optional[UserConfig]
     created: AuditInfoDto
+    scheduleId: Optional[str]
 
     @classmethod
     def from_entity(cls, entity: Dict):
@@ -51,4 +52,5 @@ class PipelineDto:
             get(entity, "state"),
             get(entity, "userConfig"),
             get(entity, "created"),
+            get(entity, "scheduleId"),
         )

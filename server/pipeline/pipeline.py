@@ -20,6 +20,7 @@ class Pipeline:
         pipeline_creation: PipelineCreation,
         pipeline_db: Database,
         user: UserDto,
+        schedule_id: Optional[str] = None,
     ):
         self.pipeline_db: Collection = pipeline_db.get_collection("pipelines")
         self.config = pipeline_config
@@ -30,6 +31,7 @@ class Pipeline:
         self.user_config = pipeline_creation.config
         self.created = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
         self.results = {}
+        self.schedule_id = schedule_id
         previous_step: Optional[Step] = None
         parallelize = pipeline_config.parallelize
         self.id: ObjectId = self.pipeline_db.insert_one(
@@ -40,6 +42,7 @@ class Pipeline:
                 "state": self.state,
                 "userConfig": self.user_config,
                 "created": self.created.serialize(),
+                "scheduleId": schedule_id,
             }
         ).inserted_id
         for step_config in pipeline_config.steps:
@@ -100,4 +103,5 @@ class Pipeline:
             state=self.state,
             userConfig=self.user_config,
             created=self.created,
+            scheduleId=self.schedule_id,
         )

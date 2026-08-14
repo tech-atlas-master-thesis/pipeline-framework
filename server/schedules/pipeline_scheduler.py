@@ -19,7 +19,11 @@ class _PipelineServer:
     pipeline_configs: List[PipelineConfig]
 
     def add_pipeline(
-        self, pipeline_configs: PipelineConfig, pipeline_creation: PipelineCreation, user: UserDto
+        self,
+        pipeline_configs: PipelineConfig,
+        pipeline_creation: PipelineCreation,
+        user: UserDto,
+        schedule_id: Optional[str] = None,
     ) -> Pipeline:
         pass
 
@@ -121,6 +125,7 @@ class PipelineScheduler:
             pipeline_config,
             schedule.pipeline,
             user if user is not None else schedule.created.by,
+            schedule_id=schedule_id,
         )
         self.db_client.update_one(
             {"_id": ObjectId(schedule_id)},
