@@ -19,7 +19,7 @@ class PipelineServer:
     running_tasks: List[asyncio.Task] = []
 
     def __init__(self, pipeline_configs: List[PipelineConfig], config_definitions: List[Configuration]):
-        self.event_loop = asyncio.get_event_loop()
+        self.event_loop = asyncio.get_running_loop()
         self.pipelines: List[Pipeline] = []
         self.pipeline_db_client = get_pipeline_db_client()
         self.raw_db_client = get_raw_db_client()
