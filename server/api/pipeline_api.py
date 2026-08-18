@@ -45,16 +45,16 @@ def pipeline_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_base_u
             sort_query = {field: int(order) for field, order in single_sorts}
         else:
             sort_query = {"_id": -1}
-        pipelines = pipeline_db.get_collection("pipelines").find(query).sort(sort_query).skip(offset).limit(limit)
-        total_records = pipeline_db.get_collection("pipelines").count_documents(query)
+        pipelines = pipeline_db.pipelines.find(query).sort(sort_query).skip(offset).limit(limit)
+        total_records = await pipeline_db.pipelines.count_documents(query)
         return PaginatedListDto(
-            [PipelineDto.from_entity(pipeline) for pipeline in pipelines], PageDto(offset, limit, total_records)
+            [PipelineDto.from_entity(pipeline) async for pipeline in pipelines], PageDto(offset, limit, total_records)
         )
 
     @app.get(api_base_url + "/pipelines/{pipeline_id}")
     async def get_pipeline(pipeline_id: str, _=Depends(AUTH_REQUIREMENTS_VIEW)) -> Optional[PipelineDto]:
         pipeline_db = get_pipeline_db_client()
-        pipeline = pipeline_db.get_collection("pipelines").find_one({"_id": ObjectId(pipeline_id)})
+        pipeline = await pipeline_db.pipelines.find_one({"_id": ObjectId(pipeline_id)})
 
         if not pipeline:
             raise HTTPException(status_code=404, detail=f"Pipeline '{pipeline_id}' not found")
@@ -64,4 +64,4 @@ def pipeline_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_base_u
     async def create_pipeline(pipeline: PipelineCreation, user=Depends(AUTH_REQUIREMENTS_EDIT)) -> PipelineDto:
         if pipeline.type not in available_pipelines or not (config := available_pipelines[pipeline.type]):
             raise HTTPException(status_code=404, detail="pipeline not found")
-        return pipeline_server.add_pipeline(config, pipeline, user).serialize()
+        return (await pipeline_server.add_pipeline(config, pipeline, user)).serialize()

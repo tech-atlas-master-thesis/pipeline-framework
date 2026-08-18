@@ -51,7 +51,7 @@ async def start_test(pipeline_server: PipelineServer):
         "steps": [BasicFirstStep(), BasicSecondStep()],
     }
 
-    pipeline_server.add_pipeline(pipeline)
+    await pipeline_server.add_pipeline(pipeline)
 
 
 def main():

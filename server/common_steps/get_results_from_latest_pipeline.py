@@ -1,22 +1,21 @@
 import json
 from typing import Optional, Union, List, Dict, Any
 
-import gridfs
 import pandas as pd
 from bson import ObjectId
 
-from ..dto import StepResultType
 from ..config import StepConfig, LocalisationStringType, LocalisationString, UserStepConfig, StepUserConfig, EventType
-from ..db import get_pipeline_db_client, get_raw_db_client
+from ..db import get_pipeline_db_client
 from ..db.helper import get_file_from_db
+from ..dto import StepResultType
 
 
 async def get_pipeline_results(pipeline_name: str, step_name: str) -> Optional[Any]:
     pipeline_db = get_pipeline_db_client()
-    pipeline = [*pipeline_db.get_collection("pipelines").find({"name": pipeline_name}).sort("_id", -1).limit(1)]
+    pipeline = [pipeline async for pipeline in pipeline_db.pipelines.find({"name": pipeline_name}).sort("_id", -1).limit(1)]
     if not pipeline:
         raise FileNotFoundError(f'No pipeline with name "{pipeline_name}" not found')
-    step = pipeline_db.get_collection("steps").find_one({"name": step_name, "pipeline": pipeline[0]["_id"]})
+    step = await pipeline_db.steps.find_one({"name": step_name, "pipeline": pipeline[0]["_id"]})
     if not step:
         raise FileNotFoundError(f'No pipeline step with name "{step_name}" for pipeline "{pipeline_name} found')
     result = step["result"]
@@ -26,7 +25,7 @@ async def get_pipeline_results(pipeline_name: str, step_name: str) -> Optional[A
         return result["data"]
     if not result["file"]:
         raise FileNotFoundError("No file id found")
-    file_data = get_file_from_db(ObjectId(result["file"]))
+    file_data = await get_file_from_db(ObjectId(result["file"]))
     match (result["type"]):
         case StepResultType.CSV:
             return pd.read_csv(file_data)

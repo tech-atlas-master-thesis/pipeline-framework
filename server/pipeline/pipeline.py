@@ -3,8 +3,8 @@ from typing import Dict, Optional
 
 from bson import ObjectId
 from pygments.lexers import q
-from pymongo.synchronous.collection import Collection
-from pymongo.synchronous.database import Database
+from pymongo.asynchronous.collection import AsyncCollection
+from pymongo.asynchronous.database import AsyncDatabase
 
 from .lock import pipelineMutex
 from .step import Step
@@ -18,11 +18,11 @@ class Pipeline:
         self,
         pipeline_config: PipelineConfig,
         pipeline_creation: PipelineCreation,
-        pipeline_db: Database,
+        pipeline_db: AsyncDatabase,
         user: UserDto,
         schedule_id: Optional[str] = None,
     ):
-        self.pipeline_db: Collection = pipeline_db.get_collection("pipelines")
+        self.pipeline_db: AsyncCollection = pipeline_db.pipelines
         self.config = pipeline_config
         self.name = pipeline_creation.name
         self.description = pipeline_creation.description
@@ -32,9 +32,9 @@ class Pipeline:
         self.created = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
         self.results = {}
         self.schedule_id = schedule_id
-        previous_step: Optional[Step] = None
-        parallelize = pipeline_config.parallelize
-        self.id: ObjectId = self.pipeline_db.insert_one(
+
+    async def initialize(self):
+        self.id: ObjectId = (await self.pipeline_db.insert_one(
             {
                 "type": self.config.type,
                 "name": self.name,
@@ -42,10 +42,13 @@ class Pipeline:
                 "state": self.state,
                 "userConfig": self.user_config,
                 "created": self.created.serialize(),
-                "scheduleId": schedule_id,
+                "scheduleId": self.schedule_id,
             }
-        ).inserted_id
-        for step_config in pipeline_config.steps:
+        )).inserted_id
+
+        previous_step: Optional[Step] = None
+        parallelize = self.config.parallelize
+        for step_config in self.config.steps:
             user_step_config = self.user_config.get(step_config.name()) if self.user_config else None
             if parallelize:
                 dependencies = (
@@ -57,17 +60,18 @@ class Pipeline:
                     raise NameError(f"Step {step_config.name} is not (yet) defined")
             else:
                 dependencies = [previous_step] if previous_step is not None else []
-            step = Step(step_config, user_step_config, self, dependencies, pipeline_db)
+            step = Step(step_config, user_step_config, self, dependencies, self.pipeline_db)
+            await step.initialize()
             self.steps[step_config.name()] = step
             if not parallelize:
                 previous_step = step
 
-    def get_updated_state(self):
+    async def get_updated_state(self):
         assert pipelineMutex.locked()
         old_state = self.state
         self.state = self._get_state()
         if old_state != self.state:
-            self.pipeline_db.update_one({"_id": self.id}, {"$set": {"state": self.state}})
+            await self.pipeline_db.update_one({"_id": self.id}, {"$set": {"state": self.state}})
         return self.state
 
     def _get_state(self):

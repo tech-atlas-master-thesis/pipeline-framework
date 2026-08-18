@@ -28,24 +28,24 @@ def schedule_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_base_u
         offset: int = 0,
         _=Depends(AUTH_REQUIREMENTS_VIEW),
     ) -> PaginatedListDto[PipelineSchedule]:
-        return pipeline_server.scheduler.get_schedules(type, active, name, sort, limit, offset)
+        return await pipeline_server.scheduler.get_schedules(type, active, name, sort, limit, offset)
 
     @app.post(api_base_url + "/schedules")
     async def create_pipeline(schedule: ScheduleCreation, user=Depends(AUTH_REQUIREMENTS_EDIT)) -> PipelineSchedule:
         if schedule.pipeline.type not in available_pipelines or not available_pipelines[schedule.pipeline.type]:
             raise HTTPException(status_code=404, detail=f"Pipeline type {schedule.pipeline.type} not found")
-        return pipeline_server.scheduler.add_schedule(schedule, user).serialize()
+        return (await pipeline_server.scheduler.add_schedule(schedule, user)).serialize()
 
     @app.get(api_base_url + "/schedules/{schedule_id}")
     async def get_pipeline(schedule_id: str, _=Depends(AUTH_REQUIREMENTS_VIEW)) -> Optional[PipelineSchedule]:
-        return pipeline_server.scheduler.get_schedule(schedule_id).serialize()
+        return (await pipeline_server.scheduler.get_schedule(schedule_id)).serialize()
 
     @app.put(api_base_url + "/schedules/{schedule_id}")
     async def update_pipeline(
         schedule_id: str, schedule: ScheduleCreation, user=Depends(AUTH_REQUIREMENTS_EDIT)
     ) -> PipelineSchedule:
-        return pipeline_server.scheduler.update_schedule(schedule_id, schedule, user).serialize()
+        return (await pipeline_server.scheduler.update_schedule(schedule_id, schedule, user)).serialize()
 
     @app.post(api_base_url + "/schedules/{schedule_id}/trigger", status_code=204)
     async def trigger_pipeline(schedule_id: str, user=Depends(AUTH_REQUIREMENTS_EDIT)):
-        pipeline_server.scheduler.run(schedule_id, user)
+        await pipeline_server.scheduler.run(schedule_id, user)

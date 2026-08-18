@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
-from pymongo.synchronous.database import Database
+from pymongo.asynchronous.database import AsyncDatabase
 
 
 def normalize_key(value: str) -> str:
@@ -9,12 +9,12 @@ def normalize_key(value: str) -> str:
 
 
 class EnrichmentCache:
-    def __init__(self, db: Database):
+    def __init__(self, db: AsyncDatabase):
         self.db = db
 
-    def get(self, provider: str, query_type: str, query: str, match_version: int) -> Optional[dict]:
+    async def get(self, provider: str, query_type: str, query: str, match_version: int) -> Optional[dict]:
         key = normalize_key(query)
-        return self.db.get_collection(provider).find_one(
+        return await self.db.get_collection(provider).find_one(
             {
                 "query_type": query_type,
                 "key": key,
@@ -22,7 +22,7 @@ class EnrichmentCache:
             }
         )
 
-    def put(
+    async def put(
         self,
         provider: str,
         query_type: str,
@@ -33,7 +33,7 @@ class EnrichmentCache:
         source: Optional[dict] = None,
     ) -> None:
         key = normalize_key(query)
-        self.db.get_collection(provider).update_one(
+        await self.db.get_collection(provider).update_one(
             {
                 "query_type": query_type,
                 "key": key,
@@ -51,7 +51,7 @@ class EnrichmentCache:
             upsert=True,
         )
 
-    def lookup(
+    async def lookup(
         self,
         provider: str,
         query_type: str,
@@ -68,11 +68,11 @@ class EnrichmentCache:
           - Exceptions raised by fetch_fn (timeouts, HTTP errors, rate limits)
             propagate and are NOT cached, so the next pipeline run retries them.
         """
-        cached = self.get(provider, query_type, query, match_version)
+        cached = await self.get(provider, query_type, query, match_version)
         if cached is not None:
             return cached["result"] if cached["status"] == "found" else None
 
         result, source = fetch_fn(query)
         status = "found" if result is not None else "not_found"
-        self.put(provider, query_type, query, match_version, status, result, source)
+        await self.put(provider, query_type, query, match_version, status, result, source)
         return result

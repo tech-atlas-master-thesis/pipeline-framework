@@ -73,7 +73,7 @@ class StepConfig(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def name() -> LocalisationStringType:
+    def name() -> str:
         raise NotImplemented("Name not implemented")
 
     @staticmethod
@@ -106,7 +106,7 @@ class PipelineDummy:
 
     results = {}
 
-    def get_updated_state(self):
+    async def get_updated_state(self):
         """Trigger to check state of every step and derive step for pipeline"""
         pass
 

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import gridfs
 from bson import ObjectId
-from pymongo import MongoClient
+from pymongo import AsyncMongoClient
 
 
 @dataclass
@@ -64,9 +64,9 @@ def get_cache_db_client():
     )
 
 
-def get_file_from_db(file_id: ObjectId):
-    file_db = gridfs.GridFS(get_raw_db_client())
-    file = file_db.get(file_id)
+async def get_file_from_db(file_id: ObjectId):
+    file_db = gridfs.AsyncGridFS(get_raw_db_client())
+    file = await file_db.get(file_id)
     if not file:
         raise FileNotFoundError(f'No file with id "{file_id}" found')
     return file
@@ -76,6 +76,6 @@ def _get_pipeline_client(mongo_db_url: str, login: DatabaseLogin):
     logging.debug(
         f'Connecting to MongoDB database: {mongo_db_url} ({login.database_name}) login: {login.username}:{"******" if login.password else "<missing>"}'
     )
-    return MongoClient(
+    return AsyncMongoClient(
         f"mongodb://{login.username}:{login.password}@{mongo_db_url}/{login.database_name}?authSource={login.database_name}"
     )[login.database_name]

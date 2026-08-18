@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from .config import PipelineConfig, PipelineState
 from .configuration import Configuration
-from .db import get_pipeline_db_client, get_raw_db_client
+from .db import get_pipeline_db_client
 from .dto import PipelineCreation
 from .dto.dto import UserDto
 from .pipeline import Pipeline, Step
@@ -22,15 +22,15 @@ class PipelineServer:
         self.event_loop: Optional[asyncio.AbstractEventLoop] = None
         self.pipelines: List[Pipeline] = []
         self.pipeline_db_client = get_pipeline_db_client()
-        self.raw_db_client = get_raw_db_client()
         self.pipeline_configs = pipeline_configs
         self.config_definitions = config_definitions
         self.scheduler = PipelineScheduler(self)
 
-    def bind_event_loop(self, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
+    async def bind_event_loop(self, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         self.event_loop = loop or asyncio.get_running_loop()
+        await self.scheduler.initialize()
 
-    def add_pipeline(
+    async def add_pipeline(
         self,
         pipeline_config: PipelineConfig,
         pipeline_creation: PipelineCreation,
@@ -38,6 +38,7 @@ class PipelineServer:
         schedule_id: Optional[str] = None,
     ) -> Pipeline:
         pipeline = Pipeline(pipeline_config, pipeline_creation, self.pipeline_db_client, user, schedule_id=schedule_id)
+        await pipeline.initialize()
         self.pipelines.append(pipeline)
         logger.info(f"Added pipeline '{pipeline.name}'")
         with pipelineMutex:
@@ -46,7 +47,7 @@ class PipelineServer:
                     logger.debug(
                         f"Added pipeline step, '{pipeline_step.name()}' ({pipeline_step.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
                     )
-                    self.running_tasks.append(self.event_loop.create_task(self._execute_step(pipeline_step)))
+                    self.running_tasks.append(self.event_loop.create_task(self._execute_step(pipeline_step), eager_start=False))
         return pipeline
 
     async def _execute_step(self, step: Step):
@@ -54,7 +55,7 @@ class PipelineServer:
         pipeline = step.pipeline
 
         with pipelineMutex:
-            step.set_state(PipelineState.RUNNING)
+            await step.set_state(PipelineState.RUNNING)
         logger.debug(f"Execute step, '{step.name()}' ({step.id}) from pipeline ''{pipeline.name}' ({pipeline.id})")
 
         try:
@@ -68,11 +69,11 @@ class PipelineServer:
                 logger.warning(
                     f"Step '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id}) ran into an error ({e})"
                 )
-                step.set_state(PipelineState.ERROR)
+                await step.set_state(PipelineState.ERROR)
                 return
 
         with pipelineMutex:
-            step.set_state(PipelineState.FINISHED)
+            await step.set_state(PipelineState.FINISHED)
             if pipeline.state == PipelineState.FINISHED:
                 logger.info(f"Pipeline '{pipeline.name}' ({pipeline.id}) finished with state {pipeline.state}")
                 return
