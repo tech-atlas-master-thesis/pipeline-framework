@@ -41,7 +41,7 @@ class PipelineServer:
         await pipeline.initialize()
         self.pipelines.append(pipeline)
         logger.info(f"Added pipeline '{pipeline.name}'")
-        with pipelineMutex:
+        async with pipelineMutex:
             for _, pipeline_step in pipeline.steps.items():
                 if all(dependency.state == PipelineState.FINISHED for dependency in pipeline_step.dependencies):
                     logger.debug(
@@ -54,7 +54,7 @@ class PipelineServer:
         logger.info(f"Executing step '{step.name()}'")
         pipeline = step.pipeline
 
-        with pipelineMutex:
+        async with pipelineMutex:
             await step.set_state(PipelineState.RUNNING)
         logger.debug(f"Execute step, '{step.name()}' ({step.id}) from pipeline ''{pipeline.name}' ({pipeline.id})")
 
@@ -64,7 +64,7 @@ class PipelineServer:
                 f"Finished executing step, '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
             )
         except Exception as e:
-            with pipelineMutex:
+            async with pipelineMutex:
                 logger.debug(traceback.format_exc())
                 logger.warning(
                     f"Step '{step.name()}' ({step.id}) from pipeline '{pipeline.name}' ({pipeline.id}) ran into an error ({e})"
@@ -72,7 +72,7 @@ class PipelineServer:
                 await step.set_state(PipelineState.ERROR)
                 return
 
-        with pipelineMutex:
+        async with pipelineMutex:
             await step.set_state(PipelineState.FINISHED)
             if pipeline.state == PipelineState.FINISHED:
                 logger.info(f"Pipeline '{pipeline.name}' ({pipeline.id}) finished with state {pipeline.state}")

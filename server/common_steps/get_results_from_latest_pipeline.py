@@ -1,3 +1,4 @@
+import io
 import json
 from typing import Optional, Union, List, Dict, Any
 
@@ -28,9 +29,9 @@ async def get_pipeline_results(pipeline_name: str, step_name: str) -> Optional[A
     file_data = await get_file_from_db(ObjectId(result["file"]))
     match (result["type"]):
         case StepResultType.CSV:
-            return pd.read_csv(file_data)
+            return pd.read_csv(io.BytesIO(await file_data.read()))
         case StepResultType.JSON:
-            return json.load(file_data)
+            return json.loads(await file_data.read())
         case _:
             return file_data
 

@@ -6,6 +6,7 @@ from typing import List, Self, Optional, Any
 import gridfs
 import pandas as pd
 from bson import ObjectId
+from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 
 from .lock import pipelineMutex
@@ -30,10 +31,10 @@ class Step:
         user_config: Optional[UserStepConfig],
         pipeline: PipelineDummy,
         dependencies: List[Self],
-        pipeline_db: AsyncDatabase,
+        step_db: AsyncCollection,
     ):
         self.id = None
-        self.pipeline_db = pipeline_db.steps
+        self.step_db = step_db
         self.state = PipelineState.OPEN
         self.step_config = step_config
         self.dependencies = dependencies
@@ -46,7 +47,7 @@ class Step:
             dependency.dependent_steps.append(self)
 
     async def initialize(self):
-        self.id: ObjectId = (await self.pipeline_db.insert_one(
+        self.id: ObjectId = (await self.step_db.insert_one(
             {
                 "pipeline": self.pipeline.id,
                 "state": self.state,
@@ -61,7 +62,7 @@ class Step:
 
     async def set_state(self, state: PipelineState):
         assert pipelineMutex.locked()
-        await self.pipeline_db.update_one({"_id": self.id}, {"$set": {"state": state}})
+        await self.step_db.update_one({"_id": self.id}, {"$set": {"state": state}})
         self.state = state
         await self.pipeline.get_updated_state()
 
@@ -91,7 +92,7 @@ class Step:
 
     async def _add_event(self, event: Event):
         self.events.append(event)
-        await self.pipeline_db.update_one(
+        await self.step_db.update_one(
             {"_id": self.id},
             {
                 "$push": {
@@ -137,7 +138,7 @@ class Step:
         if preview:
             file_id = await self._save_file(data, result_type)
 
-        await self.pipeline_db.update_one(
+        await self.step_db.update_one(
             {"_id": self.id},
             {
                 "$set": {

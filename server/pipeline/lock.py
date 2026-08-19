@@ -1,3 +1,3 @@
-import threading
+import asyncio
 
-pipelineMutex = threading.Lock()
+pipelineMutex = asyncio.Lock()

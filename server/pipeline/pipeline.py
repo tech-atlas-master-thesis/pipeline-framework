@@ -23,6 +23,7 @@ class Pipeline:
         schedule_id: Optional[str] = None,
     ):
         self.pipeline_db: AsyncCollection = pipeline_db.pipelines
+        self.step_db = AsyncCollection = pipeline_db.steps
         self.config = pipeline_config
         self.name = pipeline_creation.name
         self.description = pipeline_creation.description
@@ -60,7 +61,7 @@ class Pipeline:
                     raise NameError(f"Step {step_config.name} is not (yet) defined")
             else:
                 dependencies = [previous_step] if previous_step is not None else []
-            step = Step(step_config, user_step_config, self, dependencies, self.pipeline_db)
+            step = Step(step_config, user_step_config, self, dependencies, self.step_db)
             await step.initialize()
             self.steps[step_config.name()] = step
             if not parallelize:
