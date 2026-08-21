@@ -22,7 +22,7 @@ class GetConfiguration(StepConfig):
     async def run(self, user_config: Optional[UserStepConfig], results, **_):
         if user_config is None:
             raise FileNotFoundError("User config not provided")
-        user_input = user_config.get("getTechnologyConfiguration")
+        user_input = user_config.get(self.name())
         if user_input is None:
             raise FileNotFoundError("User config not found")
         configuration_id = user_input.get("configurationId")
@@ -32,10 +32,10 @@ class GetConfiguration(StepConfig):
         manager = ConfigurationManager([])
         if version_id is None:
             yield f'Get latest active version for configuration "{configuration_id}" of type "{self._configuration_type}"', EventType.INFO
-            version = manager.get_latest_version(configuration_id, [ConfigurationState.ACTIVE])
+            version = await manager.get_latest_version(configuration_id, [ConfigurationState.ACTIVE])
         else:
             yield f'Get version "{version_id}" for configuration "{configuration_id}" of type "{self._configuration_type}"', EventType.INFO
-            version = manager.get_version(configuration_id, version_id)
+            version = await manager.get_version(configuration_id, version_id)
         yield version.configuration, EventType.RESULT
 
     def user_config(self) -> List[StepUserConfig]:
