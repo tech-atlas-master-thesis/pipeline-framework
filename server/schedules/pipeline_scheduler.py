@@ -122,7 +122,7 @@ class PipelineScheduler:
         await self.db_client.delete_one({"_id": ObjectId(schedule_id)})
 
     async def run(self, schedule_id: str, user: Optional[UserDto] = None) -> Pipeline:
-        schedule_entity = self.db_client.find_one({"_id": ObjectId(schedule_id)})
+        schedule_entity = await self.db_client.find_one({"_id": ObjectId(schedule_id)})
         if not schedule_entity:
             raise FileNotFoundError(f"Schedule with id {schedule_id} not found")
         schedule = PipelineSchedule.from_entity(schedule_entity)
