@@ -178,3 +178,10 @@ class ConfigurationManager:
         )
 
         return await self.get_version(config_id, version_id)
+
+    async def delete_version(
+            self, config_id: str, version_id
+    ) -> None:
+        await self.version_db.delete_one(
+            {"_id": ObjectId(version_id), "collection": ObjectId(config_id)},
+        )

@@ -46,6 +46,10 @@ def schedule_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_base_u
     ) -> PipelineSchedule:
         return (await pipeline_server.scheduler.update_schedule(schedule_id, schedule, user)).serialize()
 
+    @app.delete(api_base_url + "/schedules/{schedule_id}", status_code=204)
+    async def delete_pipeline(schedule_id: str, _=Depends(AUTH_REQUIREMENTS_EDIT)):
+        await pipeline_server.scheduler.delete_schedule(schedule_id)
+
     @app.post(api_base_url + "/schedules/{schedule_id}/trigger", status_code=204)
     async def trigger_pipeline(schedule_id: str, user=Depends(AUTH_REQUIREMENTS_EDIT)):
         await pipeline_server.scheduler.run(schedule_id, user)

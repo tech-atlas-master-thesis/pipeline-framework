@@ -83,3 +83,9 @@ def configuration_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_b
         configuration_id: str, version_id, version: UpdateConfigurationVersionDto, user=Depends(AUTH_REQUIREMENTS_EDIT)
     ) -> ConfigurationVersionDto:
         return await config_manager.update_version(configuration_id, version_id, version, user)
+
+    @app.delete(api_base_url + "/configuration/{configuration_id}/version/{version_id}")
+    async def delete_version(
+            configuration_id: str, version_id: str, _=Depends(AUTH_REQUIREMENTS_EDIT)
+    ) -> None:
+        await config_manager.delete_version(configuration_id, version_id)

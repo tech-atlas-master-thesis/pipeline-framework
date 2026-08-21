@@ -115,6 +115,12 @@ class PipelineScheduler:
             )
         return schedule
 
+    async def delete_schedule(self, schedule_id: str) -> None:
+        previous_schedule = await self.get_schedule(schedule_id)
+        if previous_schedule.cron and previous_schedule.active:
+            self.scheduler.remove_schedule(previous_schedule.id)
+        await self.db_client.delete_one({"_id": ObjectId(schedule_id)})
+
     async def run(self, schedule_id: str, user: Optional[UserDto] = None) -> Pipeline:
         schedule_entity = self.db_client.find_one({"_id": ObjectId(schedule_id)})
         if not schedule_entity:
