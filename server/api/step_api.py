@@ -26,9 +26,7 @@ def step_endpoints(app: FastAPI, api_base_url: str):
     @app.get(api_base_url + "/pipelines/{pipeline_id}/steps/{step_id}/result")
     async def get_pipeline_steps_result(pipeline_id: str, step_id: str, _=Depends(AUTH_REQUIREMENTS_VIEW)) -> Response:
         pipeline_db = get_pipeline_db_client()
-        step = await pipeline_db.steps.find_one(
-            {"_id": ObjectId(step_id), "pipeline": ObjectId(pipeline_id)}
-        )
+        step = await pipeline_db.steps.find_one({"_id": ObjectId(step_id), "pipeline": ObjectId(pipeline_id)})
         if step is None:
             raise HTTPException(status_code=404, detail=f"Step {step_id} with pipeline {pipeline_id} not found")
         if "result" not in step or "file" not in step["result"]:
@@ -40,7 +38,7 @@ def step_endpoints(app: FastAPI, api_base_url: str):
                 status_code=404, detail=f"Could not find file {file_id} for step {step_id} with pipeline {pipeline_id}"
             )
         response = Response(
-            file.read(),
+            await file.read(),
             media_type=Step.get_result_http_type(step["result"]["type"] if "type" in step["result"] else "text/plain"),
         )
         if file.filename:
