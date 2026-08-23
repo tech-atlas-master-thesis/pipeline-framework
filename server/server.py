@@ -47,7 +47,7 @@ class PipelineServer:
                     logger.debug(
                         f"Added pipeline step, '{pipeline_step.name()}' ({pipeline_step.id}) from pipeline '{pipeline.name}' ({pipeline.id})"
                     )
-                    self.running_tasks.append(self.event_loop.create_task(self._execute_step(pipeline_step), eager_start=False))
+                    self.running_tasks.append(self.event_loop.create_task(self._execute_step(pipeline_step)))
         return pipeline
 
     async def _execute_step(self, step: Step):
