@@ -29,14 +29,14 @@ def configuration_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_b
 
     @app.get(api_base_url + "/configuration")
     async def get_configurations(
-        type: Annotated[Optional[List[str]], Query()] = None,
+        types: Annotated[Optional[List[str]], Query()] = None,
         name: Optional[str] = None,
         sort: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
         _=Depends(AUTH_REQUIREMENTS_VIEW),
     ) -> PaginatedListDto[ConfigurationDto]:
-        return await config_manager.get_configurations(type, name, sort, limit, offset)
+        return await config_manager.get_configurations(types, name, sort, limit, offset)
 
     @app.post(api_base_url + "/configuration")
     async def create_configuration(
@@ -85,7 +85,5 @@ def configuration_endpoints(app: FastAPI, pipeline_server: PipelineServer, api_b
         return await config_manager.update_version(configuration_id, version_id, version, user)
 
     @app.delete(api_base_url + "/configuration/{configuration_id}/version/{version_id}")
-    async def delete_version(
-            configuration_id: str, version_id: str, _=Depends(AUTH_REQUIREMENTS_EDIT)
-    ) -> None:
+    async def delete_version(configuration_id: str, version_id: str, _=Depends(AUTH_REQUIREMENTS_EDIT)) -> None:
         await config_manager.delete_version(configuration_id, version_id)

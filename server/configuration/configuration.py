@@ -29,15 +29,15 @@ class ConfigurationManager:
 
     async def get_configurations(
         self,
-        type: Optional[List[str]] = None,
+        types: Optional[List[str]] = None,
         name: Optional[str] = None,
         sort: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
     ) -> PaginatedListDto[ConfigurationDto]:
         query = {}
-        if type:
-            query["type"] = {"$in": type}
+        if types:
+            query["type"] = {"$in": types}
         if name:
             query["name"] = {"$regex": re.escape(name)}
         if sort:
@@ -69,7 +69,9 @@ class ConfigurationManager:
             raise FileNotFoundError(f'Collection with id "{collection_id}" not found')
         return ConfigurationDto.from_entity(collection)
 
-    async def update_configuration(self, config_id: str, config: UpdateConfigurationDto, user: UserDto) -> ConfigurationDto:
+    async def update_configuration(
+        self, config_id: str, config: UpdateConfigurationDto, user: UserDto
+    ) -> ConfigurationDto:
         await self.config_db.update_one(
             {"_id": ObjectId(config_id)},
             {
@@ -109,7 +111,9 @@ class ConfigurationManager:
             PageDto(offset, limit, total_records),
         )
 
-    async def get_latest_version(self, configuration_id: str, state: Optional[List[str]] = None) -> ConfigurationVersionDto:
+    async def get_latest_version(
+        self, configuration_id: str, state: Optional[List[str]] = None
+    ) -> ConfigurationVersionDto:
         query: Dict = {"collection": ObjectId(configuration_id)}
         if state:
             query["state"] = {"$in": state}
@@ -179,9 +183,7 @@ class ConfigurationManager:
 
         return await self.get_version(config_id, version_id)
 
-    async def delete_version(
-            self, config_id: str, version_id
-    ) -> None:
+    async def delete_version(self, config_id: str, version_id) -> None:
         await self.version_db.delete_one(
             {"_id": ObjectId(version_id), "collection": ObjectId(config_id)},
         )
