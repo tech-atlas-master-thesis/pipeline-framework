@@ -1,38 +1,43 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Generic, Optional
 
-from .cache import EnrichmentCache
+from .cache import EnrichmentCache, ProviderCache
+from .cache_dto import CacheEntry, FetchResult, ResultT
 
 
-class BaseEnrichmentClient(ABC):
-    provider: str  # e.g. "ror"
-    query_type: str  # e.g. "org_name"
-    match_version: int = 1  # bump if _fetch's matching logic changes
+class BaseEnrichmentClient(ABC, Generic[ResultT]):
+    provider: str
+    query_type: str
+    result_model: type[ResultT]
+    match_version: int = 1
 
     def __init__(self, cache: EnrichmentCache):
-        self.cache = cache
-
-    def lookup(self, query: str) -> Optional[dict]:
-        return self.cache.lookup(
+        self.cache: ProviderCache[ResultT] = cache.for_provider(
             self.provider,
             self.query_type,
-            query,
-            self._fetch,
+            self.result_model,
             self.match_version,
         )
 
+    async def ensure_indexes(self) -> None:
+        await self.cache.ensure_indexes()
+
+    async def lookup(self, query: str) -> Optional[ResultT]:
+        return await self.cache.lookup(query, self._fetch)
+
+    async def lookup_entry(self, query: str) -> CacheEntry[ResultT]:
+        return await self.cache.lookup_entry(query, self._fetch)
+
     @abstractmethod
-    def _fetch(self, query: str) -> tuple:
+    async def _fetch(self, query: str) -> FetchResult[ResultT]:
         """Call the external API for `query`.
 
-        Return (result, source_metadata):
-          - result: dict describing the match, or None if the API genuinely
-            reports no match (this None gets cached).
-          - source_metadata: dict for auditability (request URL, raw ID, etc.),
-            may be None.
+        Return `FetchResult(result=..., source=...)` on a match, or
+        `FetchResult.not_found(source=...)` when the API genuinely reports no
+        match (that gets cached).
 
-        Let exceptions (timeouts, HTTP errors, rate limiting) propagate -
-        do not catch and convert them to a "not found" result, or you will
-        permanently cache a transient failure.
+        Let exceptions (timeouts, HTTP errors, rate limiting) propagate - do
+        not catch them and return `not_found`, or you will permanently cache a
+        transient failure.
         """
         raise NotImplementedError
