@@ -55,6 +55,17 @@ def get_fe_db_client():
     )
 
 
+def get_registry_db_client():
+    return _get_pipeline_client(
+        os.environ.get("MONGO_URL"),
+        DatabaseLogin(
+            os.environ.get("DB_REGISTRY_NAME"),
+            os.environ.get("DB_REGISTRY_USER"),
+            os.environ.get("DB_REGISTRY_PASS"),
+        ),
+    )
+
+
 def get_cache_db_client():
     return _get_pipeline_client(
         os.environ.get("MONGO_URL"),

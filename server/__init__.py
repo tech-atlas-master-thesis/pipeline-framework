@@ -7,3 +7,4 @@ from .db import *
 from .configuration import *
 from .common_steps import *
 from .cache import *
+from .registries import *

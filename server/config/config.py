@@ -82,7 +82,7 @@ class StepConfig(metaclass=ABCMeta):
         raise NotImplemented("Name not implemented")
 
     @staticmethod
-    def description(self) -> Optional[LocalisationStringType]:
+    def description() -> Optional[LocalisationStringType]:
         return None
 
     def user_config(self) -> List[StepUserConfig]:
