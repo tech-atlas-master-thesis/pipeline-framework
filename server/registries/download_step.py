@@ -64,7 +64,9 @@ class StreamingDownloadStep(StepConfig, metaclass=ABCMeta):
             remote = await self.resolve_remote_file(session, user_config)
             yield f'Upstream version for "{self.source}": {remote.version}', EventType.INFO
 
-            if has_active and not force and previous.last_download and previous.last_download.version == remote.version:
+            if force:
+                yield "FORCE_DOWNLOAD is set - ignoring the cached version and ETag", EventType.INFO
+            elif has_active and previous.last_download and previous.last_download.version == remote.version:
                 yield (
                     f"Version {remote.version} is already active "
                     f"({previous.active.records} records in {previous.active.collection})",
@@ -72,9 +74,6 @@ class StreamingDownloadStep(StepConfig, metaclass=ABCMeta):
                 )
                 yield self._result(self.STATUS_UNCHANGED_VERSION, remote), EventType.RESULT
                 return
-
-            if force:
-                yield "FORCE_DOWNLOAD is set - ignoring the cached version and ETag", EventType.INFO
 
             conditional = previous.last_download if (has_active and not force) else None
             destination = work_directory(self.work_dir) / self._destination_name(remote)

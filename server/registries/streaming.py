@@ -121,6 +121,11 @@ async def stream_download(
                     yield DownloadProgress(downloaded=downloaded, total=total)
                     next_report += progress_interval
 
+        # Read through the case-insensitive multidict before flattening it: aiohttp
+        # normalises the key to "Etag", so a plain dict lookup for "ETag" finds nothing
+        # and every later run would re-download instead of asking for a 304.
+        response_etag = response.headers.get("ETag")
+        response_last_modified = response.headers.get("Last-Modified")
         response_headers = dict(response.headers)
 
     os.replace(partial, destination)
@@ -130,8 +135,8 @@ async def stream_download(
         path=destination,
         bytes=downloaded,
         sha256=digest.hexdigest(),
-        etag=response_headers.get("ETag"),
-        last_modified=response_headers.get("Last-Modified"),
+        etag=response_etag,
+        last_modified=response_last_modified,
         headers=response_headers,
     )
 
