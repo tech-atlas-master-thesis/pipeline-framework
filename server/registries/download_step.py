@@ -171,7 +171,7 @@ class StaticUrlDownloadStep(StreamingDownloadStep, metaclass=ABCMeta):
         if self.version:
             return RemoteFile(url=url, version=self.version)
 
-        async with session.head(url, allow_redirects=True) as response:
+        async with session.head(url, allow_redirects=True, ssl=False) as response:
             response.raise_for_status()
             etag = response.headers.get("ETag")
             last_modified = response.headers.get("Last-Modified")

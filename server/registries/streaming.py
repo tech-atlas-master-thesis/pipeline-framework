@@ -97,7 +97,7 @@ async def stream_download(
     digest = hashlib.sha256()
     downloaded = 0
 
-    async with session.get(url, headers=request_headers) as response:
+    async with session.get(url, headers=request_headers, ssl=False) as response:
         if response.status == 304:
             yield DownloadOutcome(
                 status=DownloadOutcome.NOT_MODIFIED,
