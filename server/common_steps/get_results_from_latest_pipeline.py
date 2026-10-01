@@ -13,7 +13,12 @@ from ..dto import StepResultType
 
 async def get_pipeline_results(pipeline_name: str, step_name: str) -> Optional[Any]:
     pipeline_db = get_pipeline_db_client()
-    pipeline = [pipeline async for pipeline in pipeline_db.pipelines.find({"name": pipeline_name}).sort("_id", -1).limit(1)]
+    pipeline = [
+        pipeline
+        async for pipeline in pipeline_db.pipelines.find({"name": pipeline_name, "state": "FINISHED"})
+        .sort("_id", -1)
+        .limit(1)
+    ]
     if not pipeline:
         raise FileNotFoundError(f'No pipeline with name "{pipeline_name}" not found')
     step = await pipeline_db.steps.find_one({"name": step_name, "pipeline": pipeline[0]["_id"]})
