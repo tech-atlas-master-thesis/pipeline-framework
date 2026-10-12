@@ -47,18 +47,22 @@ class Step:
             dependency.dependent_steps.append(self)
 
     async def initialize(self):
-        self.id: ObjectId = (await self.step_db.insert_one(
-            {
-                "pipeline": self.pipeline.id,
-                "state": self.state,
-                "name": self.step_config.name(),
-                "displayName": self.step_config.display_name().to_json() if self.step_config.display_name() else None,
-                "description": self.step_config.description().to_json() if self.step_config.description() else None,
-                "events": self.events,
-                "result": self.result,
-                "dependencies": self.step_config.dependencies(),
-            }
-        )).inserted_id
+        self.id: ObjectId = (
+            await self.step_db.insert_one(
+                {
+                    "pipeline": self.pipeline.id,
+                    "state": self.state,
+                    "name": self.step_config.name(),
+                    "displayName": (
+                        self.step_config.display_name().to_json() if self.step_config.display_name() else None
+                    ),
+                    "description": self.step_config.description().to_json() if self.step_config.description() else None,
+                    "events": self.events,
+                    "result": self.result,
+                    "dependencies": self.step_config.dependencies(),
+                }
+            )
+        ).inserted_id
 
     async def set_state(self, state: PipelineState):
         assert pipelineMutex.locked()
@@ -81,12 +85,16 @@ class Step:
                     self.pipeline.results[self.name()] = event
                     self.result = await self._save_result(event)
                 else:
-                    await self._add_event(Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO))
+                    await self._add_event(
+                        Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO)
+                    )
             for warning in warnings:
                 await self._add_event(warning)
 
         except Exception as e:
-            await self._add_event(Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR))
+            await self._add_event(
+                Event(datetime.datetime.now(), f"Pipeline step failed with error: {e}", EventType.ERROR)
+            )
             raise e
         await self._add_event(Event(datetime.datetime.now(), "Pipeline step ended", EventType.INFO))
 
@@ -125,7 +133,7 @@ class Step:
             data = json.dumps(result, default=custom_json_encoder, indent=2)
             preview = len(data) > 1000
             if preview:
-                preview_data = f"{len(data)} entries in total\nFirst items: \n\n{pprint.pformat(dict([*result.items()][:10]), depth=2)}"
+                preview_data = f"{len(result)} entries in total\nFirst items: \n\n{pprint.pformat(dict([*result.items()][:10]), depth=2)}"
             result_type = StepResultType.JSON
 
         elif isinstance(result, list):
