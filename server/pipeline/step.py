@@ -73,13 +73,13 @@ class Step:
     async def run(self):
         await self._add_event(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
-            warnings = []
+            events = []
             async for event, event_type in self.step_config.run(
                 user_config=self.user_config,
                 results=self.pipeline.results,
                 pipeline=self.pipeline,
                 step=self,
-                warnings=warnings,
+                events=events,
             ):
                 if event_type == EventType.RESULT:
                     self.pipeline.results[self.name()] = event
@@ -88,8 +88,8 @@ class Step:
                     await self._add_event(
                         Event(datetime.datetime.now(), event, event_type if event_type else EventType.INFO)
                     )
-            for warning in warnings:
-                await self._add_event(warning)
+            for events in events:
+                await self._add_event(events)
 
         except Exception as e:
             await self._add_event(

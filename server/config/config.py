@@ -66,7 +66,7 @@ class StepConfig(metaclass=ABCMeta):
         results: Optional[Dict[str, Any]] = None,
         pipeline: PipelineDummy = None,
         step: StepDummy = None,
-        warnings: Optional[List[Event]] = None,
+        events: Optional[List[Event]] = None,
     ):
         yield
         raise NotImplementedError
