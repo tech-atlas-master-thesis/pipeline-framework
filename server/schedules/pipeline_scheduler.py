@@ -137,7 +137,7 @@ class PipelineScheduler:
         )
         await self.db_client.update_one(
             {"_id": ObjectId(schedule_id)},
-            {"$set": {"last_pipeline": pipeline.id, "last_execution": pipeline.created.at}},
+            {"$set": {"lastPipeline": str(pipeline.id), "lastExecution": pipeline.created.at}},
         )
         return pipeline
 
