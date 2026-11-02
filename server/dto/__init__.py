@@ -25,3 +25,4 @@ from .config import (
     UpdateConfigurationVersionDto,
 )
 from .serialisation import custom_json_encoder
+from .schedules import ScheduleCreation, ScheduleDto
