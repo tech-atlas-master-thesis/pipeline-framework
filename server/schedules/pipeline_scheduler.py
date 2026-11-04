@@ -1,3 +1,5 @@
+import asyncio
+import concurrent.futures
 import datetime
 import re
 from typing import Optional, List
@@ -13,6 +15,8 @@ from ..db import get_pipeline_db_client
 from ..dto import PaginatedListDto, PageDto, PipelineCreation, UserDto, AuditInfoDto
 from ..dto.schedules import ScheduleCreation
 from ..pipeline import Pipeline
+
+FIRE_POLL_INTERVAL = 1
 
 
 class _PipelineServer:
@@ -44,12 +48,30 @@ class PipelineScheduler:
         async for schedule_entity in self.db_client.find():
             schedule = PipelineSchedule.from_entity(schedule_entity)
             if schedule.cron and schedule.active:
-                self.scheduler.add_schedule(
-                    self.run,
-                    CronTrigger.from_crontab(schedule.cron),
-                    id=schedule.id,
-                    args=[schedule.id],
-                )
+                self._start_cron(schedule)
+
+    def _start_cron(self, schedule: PipelineSchedule) -> None:
+        self.scheduler.add_schedule(
+            self._fire,
+            CronTrigger.from_crontab(schedule.cron),
+            id=schedule.id,
+            args=[schedule.id],
+        )
+
+    def _fire(self, schedule_id: str) -> None:
+        # Runs on a scheduler worker thread. The Mongo client, pipelineMutex and the step tasks all
+        # belong to the main loop, so the run has to happen there and this thread only waits for it.
+        loop = self.pipeline_server.event_loop
+        if loop is None or not loop.is_running():
+            raise RuntimeError(f"Cannot run schedule {schedule_id}: the main event loop is not running")
+        future = asyncio.run_coroutine_threadsafe(self.run(schedule_id), loop)
+        # Polling instead of a plain result(): a loop that stops now would never finish the future,
+        # and this thread would then block interpreter exit. A loop that is merely busy just takes longer.
+        while not concurrent.futures.wait([future], timeout=FIRE_POLL_INTERVAL).done:
+            if not loop.is_running():
+                future.cancel()
+                raise RuntimeError(f"Schedule {schedule_id} abandoned: the main event loop stopped")
+        future.result()
 
     async def add_schedule(self, schedule_creation: ScheduleCreation, user: UserDto) -> PipelineSchedule:
         schedule = PipelineSchedule(
@@ -61,12 +83,7 @@ class PipelineScheduler:
         )
         await self.db_client.insert_one(schedule.to_entity())
         if schedule.cron and schedule.active:
-            self.scheduler.add_schedule(
-                self.run,
-                CronTrigger.from_crontab(schedule.cron),
-                id=schedule.id,
-                args=[schedule.id],
-            )
+            self._start_cron(schedule)
         return schedule
 
     async def get_schedules(
@@ -110,9 +127,7 @@ class PipelineScheduler:
         schedule.modified = AuditInfoDto(user, datetime.datetime.now(datetime.UTC))
         await self.db_client.replace_one({"_id": ObjectId(schedule_id)}, schedule.to_entity())
         if schedule.cron and schedule.active:
-            self.scheduler.add_schedule(
-                self.run, CronTrigger.from_crontab(schedule.cron), id=schedule.id, args=[schedule_id]
-            )
+            self._start_cron(schedule)
         return schedule
 
     async def delete_schedule(self, schedule_id: str) -> None:
