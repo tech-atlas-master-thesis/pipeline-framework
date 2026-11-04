@@ -1,15 +1,16 @@
+import asyncio
 import datetime
 import json
 import pprint
-from typing import List, Self, Optional, Any
+from typing import List, Self, Optional, Any, Tuple
 
 import gridfs
 import pandas as pd
 from bson import ObjectId
 from pymongo.asynchronous.collection import AsyncCollection
-from pymongo.asynchronous.database import AsyncDatabase
 
 from .lock import pipelineMutex
+from .loop_monitor import STEP_TASK_PREFIX
 from ..dto import StepDto, StepResultDto, StepResultType, custom_json_encoder
 from ..config import StepConfig, UserStepConfig, PipelineState, EventType, PipelineDummy, Event
 from ..db import get_raw_db_client
@@ -71,6 +72,8 @@ class Step:
         await self.pipeline.get_updated_state()
 
     async def run(self):
+        # Lets the loop lag monitor name the steps that were running during a stall.
+        asyncio.current_task().set_name(f"{STEP_TASK_PREFIX}{self.name()}")
         await self._add_event(Event(datetime.datetime.now(), "Pipeline step started", EventType.INFO))
         try:
             events = []
@@ -117,9 +120,34 @@ class Step:
         if result is None:
             return None
 
+        # A pipeline's results can run to many megabytes, which is too much to format on the loop.
+        data, preview, preview_data, result_type = await asyncio.to_thread(self._serialize_result, result)
+        file_id = None
+
+        if preview:
+            file_id = await self._save_file(data, result_type)
+
+        await self.step_db.update_one(
+            {"_id": self.id},
+            {
+                "$set": {
+                    "result": {
+                        "type": result_type,
+                        "preview": preview,
+                        "file": str(file_id),
+                        "data": preview_data,
+                    }
+                }
+            },
+        )
+        return StepResultDto(
+            result_type, preview, str(file_id) if file_id else None, preview_data if file_id else str(result)
+        )
+
+    @staticmethod
+    def _serialize_result(result: Any) -> Tuple[Optional[str], bool, Optional[str], StepResultType]:
         preview = False
         result_type = StepResultType.STRING
-        file_id = None
         data = None
         preview_data = None
 
@@ -143,25 +171,7 @@ class Step:
                 preview_data = f"{len(result)} entries in total\nFirst three items:\n{pprint.pformat(result[:3])}"
             result_type = StepResultType.JSON
 
-        if preview:
-            file_id = await self._save_file(data, result_type)
-
-        await self.step_db.update_one(
-            {"_id": self.id},
-            {
-                "$set": {
-                    "result": {
-                        "type": result_type,
-                        "preview": preview,
-                        "file": str(file_id),
-                        "data": preview_data,
-                    }
-                }
-            },
-        )
-        return StepResultDto(
-            result_type, preview, str(file_id) if file_id else None, preview_data if file_id else str(result)
-        )
+        return data, preview, preview_data, result_type
 
     async def _save_file(self, content: str, file_type: StepResultType) -> ObjectId:
         file_db = gridfs.AsyncGridFS(get_raw_db_client())

@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABCMeta, abstractmethod
+from itertools import islice
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union
 
@@ -62,22 +63,16 @@ class SnapshotLoadStep(StepConfig, metaclass=ABCMeta):
 
         total = 0
         next_report = self.PROGRESS_INTERVAL
-        batch: List[Dict[str, Any]] = []
+        documents = iter(self.iter_documents(path))
 
-        for document in self.iter_documents(path):
-            batch.append(document)
-            if len(batch) >= self.BATCH_SIZE:
-                await target.insert_many(batch, ordered=False)
-                total += len(batch)
-                batch = []
-                await asyncio.sleep(0)
-                if total >= next_report:
-                    yield f"Inserted {total:,} documents", EventType.INFO
-                    next_report += self.PROGRESS_INTERVAL
-
-        if batch:
+        # Parsing is CPU work, so each batch is pulled on a worker thread. Only one batch is ever
+        # in flight, so the iterator is never used by two threads at once.
+        while batch := await asyncio.to_thread(lambda: list(islice(documents, self.BATCH_SIZE))):
             await target.insert_many(batch, ordered=False)
             total += len(batch)
+            if total >= next_report:
+                yield f"Inserted {total:,} documents", EventType.INFO
+                next_report += self.PROGRESS_INTERVAL
 
         if total == 0:
             await db.drop_collection(target_name)
